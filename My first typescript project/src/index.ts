@@ -1,216 +1,224 @@
 
-interface VariableLookup{[key:string]:number}
-interface FunctionLookup{[key:string]:string}
+/// <reference path="calc.ts"/> 
 
+// Types
+type Point={x:number, y:number}
 
-// Declare JS objects
-let variables={'e':Math.E,'pi':Math.PI} as VariableLookup
-let functions={
-  'exp1':"e^§1",
-  "lg2":"Math.log(§1)/Math.log(§2)",
-  "lg1":"Math.log(§1)",
-  "nCk2":"fac§1/(fac(§1-§2)*fac(§2))"
-} as FunctionLookup
-let selectedLogIdx=-1
-
-// Select HTML objects
-const logBox=document.querySelector<HTMLUListElement>("#log-box")
-const consoleForm=document.querySelector<HTMLInputElement>("#console-form")
-const consoleInput=document.querySelector<HTMLInputElement>("#console-input")
-const outputField=document.querySelector<HTMLParagraphElement>("#output-field")
-
-if(consoleForm && consoleInput) consoleForm.addEventListener("submit",(e)=>{
-  e.preventDefault()
-  inputReceived(consoleInput.value)
-  consoleInput.value=""
-})
-if(consoleInput) consoleInput.addEventListener("keyup",(e)=>{
-  inputReceived(consoleInput.value,false)
-})
-function inputReceived(msg:string,printLog:boolean=true){
-  if(msg.length==0){
-    if(printLog)return
-    else log("","",false)
-    return
+class Viewport{
+  x=0; y=0; w=0; h=0;
+  constructor(){
+    this.x=2
+    this.y=1
+    this.h=8
+    this.w=this.h*window.innerWidth/window.innerHeight
   }
-  if(msg.includes("=") && !msg.includes("==")){
-    msg=msg.replace(/(\d+)(pi|e)/gi, '($1*$2)');
-    var s=msg.split("=")
-    if(["sqrt","sin","cos","pi","e","i"].includes(s[0])){
-      log("Error: illegal override: "+s[0]+"#red",msg,printLog)
-      return
-    }
-    if(s[0].includes("(")){ //defining a function
-      var argsString=s[0].split("(")[1]
-      argsString=argsString.substring(0,clampedIndex(argsString,")",0))
-      var args=argsString.replace(" ","").split(",")
-      var funcName=s[0].split("(")[0]+args.length
-      var funcString=s[1].replaceAll("^","**")
-      for(var i=0; i<args.length; i++)
-        funcString=funcString.replace(args[i],"§"+(i+1))
-      functions[funcName]=funcString
-      log(mathString(s[0])+"<br><strong>:</strong>= "+mathString(s[1]),msg,printLog)
-      return
-    }else{ //defining a variable
-      var res1=myEvalFunc(s[1].replaceAll("^","**"))
-      if(res1!="undefined"){
-        variables[s[0]]=res1
-        log(mathString(s[0])+"<br><strong>:</strong>= "+mathString(s[1]),msg,printLog)
-      }else  log(mathString(s[0])+"<br><strong>:</strong>= undefined",msg,printLog)
-      return
-    }
-
-  }else if(!msg.includes("# ")) try{
-    var msgEval=msg.replace(/(\d+)(pi|e)/gi, '($1*$2)');
-    var res=myEvalFunc(lookupVariables(msgEval).replaceAll("^","**"))
-    var s1=msg.split("#")
-    var msgOut=s1[0]
-    if(res!="undefined") msgOut=mathString(s1[0])+"<br>= "+res
-    if(s1.length>1)msgOut+="#"+s1[1]
-    log(msgOut,msg,printLog)
-    return
-  }catch{}
-  log(msg,msg,printLog)
-}
-function fac(n:number){
-  if(n==0) return 1
-  for(var i=n-1; i>0; i--) n*=i
-  return n
-}
-function clampedIndex(msg:string,q:string,pos:number=0){
-  var pos=msg.indexOf(q,pos)
-  if(pos<0)return msg.length
-  return pos
-}
-function myEvalFunc(msg:string):any{
-  msg=msg.split("#")[0] // ignore styling 
-  function parseSyntax(sqrt:string,mathsqrt:string){
-    var i=0
-    while(i>=0 && i<msg.length-sqrt.length){
-      i=msg.indexOf(sqrt,i)
-      if(i<0) break
-      if(msg[i+sqrt.length]!='('){
-        var nextOperator=msg.length
-        const breakChars="+-*/() "
-        for(var j=0; j<breakChars.length; j++)
-          nextOperator=Math.min(clampedIndex(msg,breakChars[j],i+1+sqrt.length),nextOperator)
-        msg=msg.substring(0,i)+mathsqrt+"("+msg.substring(i+sqrt.length,nextOperator)+")"+msg.substring(nextOperator)
-      }else{
-        msg=msg.substring(0,i)+mathsqrt+msg.substring(i+sqrt.length)
-      }
-      i+=mathsqrt.length
-    }
+  remap(x:number,min1:number,max1:number,min2:number,max2:number):number{
+    return (x-min1)/(max1-min1)*(max2-min2)+min2
   }
-  parseSyntax("sqrt","Math.sqrt") ; parseSyntax("sin","Math.sin") ; parseSyntax("cos","Math.cos") ; parseSyntax("fac","fac") 
-  var parIn=msg.split("(").length
-  var parOut=msg.split(")").length
-  try{
-    if(parIn>parOut)
-      for(;parOut<parIn; parOut++) msg+=")"
-    else if(parIn<parOut)
-      for(;parIn<parOut; parIn++) msg="("+msg
-    return Math.round(eval(msg)*10000000)/10000000
-  }catch{return "undefined"}
-}
-
-function lookupVariables(msg:string){
-  msg=lookupFunctions(msg)
-  var sorted = Object.keys(variables).sort((a, b) => b.length - a.length)
-  for(const v in sorted)
-    msg=msg.replaceAll(sorted[v],variables[sorted[v]].toString())
-  return msg
-}
-
-function lookupFunctions(msg:string){
-  var sorted = Object.keys(functions).sort((a, b) => b.length - a.length)
-  for(const v in sorted){
-    var q=sorted[v].substring(0,sorted[v].length-1)
-    msg=replaceFunctionMsg(msg,q,parseInt(sorted[v].substring(sorted[v].length-1)),functions[sorted[v]])
+  transformPoint(x:number=0,y:number=0):Point{
+    return { x:this.transformX(x),y:this.transformY(y) }
   }
-  return msg
-}
-function replaceFunctionMsg(msg:string,q:string,numArgs:number,r:string){
-  var i=0
-  while(i<msg.length){
-    i=msg.indexOf(q,i)
-    if(i<0)break
-    var fStart=i
-    i+=q.length+1
-    var argsStart=i
-    i=msg.indexOf(")",i)
-    if(i<0)i=msg.length
-    var args=msg.substring(argsStart,i).split(',')
-    if(args.length==numArgs){
-      for(var j=0; j<numArgs; j++)
-        r=r.replaceAll("§"+(j+1),args[j])
-      msg=msg.substring(0,fStart)+r+msg.substring(i+1)
-      i+=r.length-(i-fStart)+1
-    }
-    //msg=msg.substring(0,fStart)+r.replaceAll("§1",args[0])+msg.substring(i)
+  transformX(x:number=0):number{
+    return this.remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
   }
-  return msg
-}
-
-
-// whitespace between numbers and operators, and replaces * with dot
-function mathString(msg:string){
-  msg=msg.replaceAll("sinpi","sin pi").replaceAll("cospi","cos pi").replaceAll("sqrt","&radic;")
-  const regex = /([-+*/^<>()|])/g;
-  msg= msg.replace(regex, (match, operator) => {
-  if (operator) {
-    return ` ${operator} `;
+  transformY(y:number=0):number{
+    return this.remap(y,this.y-this.h,this.y+this.h,canvas.height,0)
   }
-  return match;
-  }).replaceAll("*","&middot;").replaceAll(",",", ");
-  msg = msg.replace(/(?<!\w)e(?!w)/g, '<em>e</em>');
-  msg = msg.replace(/(?<![a-zA-Z])pi(?![a-zA-Z])/g, 'π');
-  
-  return msg
-}
-
-// write to the log
-function log(msg:string,msgOriginal:string,printLog:boolean){
-  var details=msg.split("#") // get styling
-  if(msg.startsWith("## "))
-    msg="<h3>"+details[2].substring(1)+"</h3>"
-  else if(msg.startsWith("# "))
-    msg="<h2>"+details[1].substring(1)+"</h2>"
-  else msg=details[0]
-  if(!logBox) return
-  var logIdx=logBox.childElementCount
-  if(printLog){
-    if(selectedLogIdx>=0){
-      var q1=logBox!.children[selectedLogIdx]
-      q1.innerHTML=msg
-      q1.setAttribute("value",msgOriginal)
-      q1.setAttribute("color","")
-      for(let i=1; i<details.length; i++) if(details[i].length>1 && details[i][0]!=" ")
-        q1.setAttribute("color",details[i])
-      logBox.children[selectedLogIdx].classList.remove("selected")
-      selectedLogIdx=-1
+  revertX(x:number=0):number{
+    return this.remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
+  }
+  revertY(y:number=0):number{
+    return this.remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
+  }
+  pan(offset:Point):void{
+    this.x+=offset.x*(2*this.w)/canvas.width
+    this.y-=offset.y*(2*this.h)/canvas.height
+  }
+  zoom(offset:number):void{
+    // mx,my are used to zoom in at the cursor
+    var mx=this.revertX(mousePos.x)
+    var my=this.revertY(mousePos.y)
+    if(offset<0){
+      var dx=(mx-this.x)*(1-1/1.3)
+      this.x+=dx
+      var dy=(my-this.y)*(1-1/1.3)
+      this.y+=dy
+      this.w/=1.3 // only scaling w,h leads to zooming about the origin
+      this.h/=1.3
     }else{
-      var q = document.createElement("li")
-      q.setAttribute("value",msgOriginal)
-      q.setAttribute("color","")
-      for(let i=1; i<details.length; i++) if(details[i].length>1 && details[i][0]!=" ")
-      q.setAttribute("color",details[i])
-      q.innerHTML=msg
-      logBox.append(q)
-      logBox.scrollTop = logBox.scrollHeight; // scroll latest into view
-      q.addEventListener("click",(e)=>{
-        consoleInput!.value=q.getAttribute("value")!
-        if(selectedLogIdx>=0)
-          logBox.children[selectedLogIdx].classList.remove("selected")
-        selectedLogIdx=logIdx
-        logBox.children[logIdx].classList.add("selected")
-        consoleInput!.focus()
-      })
+      var dx=(mx-this.x)*(1-1.3)
+      this.x+=dx
+      var dy=(my-this.y)*(1-1.3)
+      this.y+=dy
+      this.w*=1.3
+      this.h*=1.3
     }
-  }else{
-    if(outputField)
-      outputField.innerHTML=msg
   }
 }
-//inputReceived("pi="+Math.PI+"#info")
-//inputReceived("e="+Math.E+"#info")
-//inputReceived("## Test#red")
+
+// Declare rendering objects
+const canvas=document.querySelector<HTMLCanvasElement>("#canvas")!; // saves me some headache
+const ctx=canvas.getContext("2d");
+const view=new Viewport()
+let mousePos={x:0,y:0}
+let graphs={} as {[key:string]:Function}
+let points={} as {[key:string]:Point}
+let mouseMomentum={x:0,y:0}
+let mouseButton=0
+const graphColors=[
+  "#222", // Default Gray
+  "#3498db", // Bright Blue
+  "#2ecc71", // Emerald Green
+  "#f39c12", // Sunflower Yellow
+  "#e74c3c", // Crimson Red
+  "#9b59b6", // Amethyst Purple
+  "#27ae60", // Nephritis Green
+  "#e67e22", // Carrot Orange
+  "#e84393", // Wild Watermelon Pink
+  "#2980b9", // Dark Blue
+  "#d35400"  // Pumpkin Orange
+]
+
+// Setup rendering
+if(!ctx || !canvas) console.log("Error getting canvas")
+else{
+  GraphViewRender(canvas,ctx)
+  canvas.addEventListener("mousedown",(e)=>{
+    //what to do hmmm
+  })
+  canvas.addEventListener("mousemove",(e)=>{
+    var newMousePos={x:e.x,y:e.y}
+    var mouseMoveDelta=PointOffset(mousePos,newMousePos)
+    mouseButton=e.buttons
+    if(e.buttons==1){
+      view.pan(mouseMoveDelta)
+      GraphViewRender(canvas,ctx)
+      mouseMomentum.x=mouseMoveDelta.x*0.2+mouseMomentum.x*0.8
+      mouseMomentum.y=mouseMoveDelta.y*0.2+mouseMomentum.y*0.8
+    }
+    mousePos=newMousePos
+  })
+  canvas.addEventListener('wheel',(e)=>{
+    view.zoom(e.deltaY)
+    GraphViewRender(canvas,ctx)
+    return false; 
+}, false);
+}
+setInterval(()=>{
+  GraphViewRender(canvas,ctx!)
+  if(mouseButton!=1) view.pan(mouseMomentum)
+  mouseMomentum.x*=0.9
+  mouseMomentum.y*=0.9
+},0.1)
+
+// Draw graphs on the canvas
+function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D){
+  clearCanvas()
+
+  // TODO: Axes overlap >:(
+
+  function Round2(x:number){
+    if(Math.abs(x)<1) return x.toFixed(2);
+    return x.toString()
+  }
+
+  // X-axis
+  ctx.fillStyle="#777"
+  ctx.strokeStyle="#bbb"
+  ctx.beginPath()
+  var yT=clamp(view.transformY(),10,canvas.height-15)
+  ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
+  ctx.stroke()
+  var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w)
+  getAxisNotches(view.x-view.w,view.x+view.w,notchInterval).forEach((x)=>{
+    ctx.beginPath()
+    xT=view.transformX(x)
+    ctx.strokeStyle="#bbb"
+    ctx.moveTo(xT,yT-5) ; ctx.lineTo(xT,yT+5)
+    ctx.stroke()
+    ctx.strokeStyle="#eee"
+    ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.height)
+    if(x!=0)ctx.stroke()
+    ctx.fillText(Round2(x),xT+3,yT+12)
+  })
+  
+  // Y-axis
+  ctx.strokeStyle="#bbb"
+  ctx.beginPath()
+  var xT=clamp(view.transformX(),360,canvas.width-10)
+  ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
+  ctx.stroke()
+  getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
+    ctx.beginPath()
+    yT=view.transformY(y)
+    ctx.strokeStyle="#bbb"
+    ctx.moveTo(xT-5,yT) ; ctx.lineTo(xT+5,yT)
+    ctx.stroke()
+    ctx.strokeStyle="#eee"
+    ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
+    if(y!=0)ctx.stroke()
+    ctx.fillText(Round2(y),xT+10,yT+5)
+  })
+
+  // Graphs
+  ctx.font="16px Arial"
+  var graphIdx=0
+  for(var g in graphs){
+    ctx.fillStyle=graphColors[graphIdx%graphColors.length]
+    ctx.fillText(g+"(x)",360,18+graphIdx*22)
+    var pointOnGraph=view.transformPoint(view.x,graphs[g](view.x))
+    ctx.moveTo(pointOnGraph.x,pointOnGraph.y)
+    ctx.beginPath()
+    for(var x=view.x-view.w; x<view.x+view.w+0.1; x+=0.1){ //+0.1 to render even when partially off-cam
+      pointOnGraph=view.transformPoint(x,graphs[g](x))
+      ctx.lineTo(pointOnGraph.x,pointOnGraph.y)
+    }
+    ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+    ctx.stroke()
+    graphIdx++
+  }
+}
+
+// Helper functions
+function PointOffset(a:Point,b:Point):Point{
+  return {x:a.x-b.x,y:a.y-b.y}
+}
+function clearCanvas(){
+  ctx!.fillStyle="white"
+  ctx!.fillRect(0,0,canvas!.width,canvas!.height)
+}
+function clamp(x:number,min:number,max:number){
+  if(x<min)return min
+  if(x>max)return max
+  return x
+}
+function getNotchInterval(from:number,to:number,nNotchesOptimal:number=40){
+  var range=Math.abs(to-from)
+  var optimalNotchDistance=100*range/nNotchesOptimal
+  var notchDistance=0.01
+  function iterFindNotch(){
+    if(optimalNotchDistance<1) return true
+    if(optimalNotchDistance<2){
+      notchDistance*=2
+      return true
+    }
+    if(optimalNotchDistance<5){
+      notchDistance*=5
+      return true
+    }
+    optimalNotchDistance/=10
+    notchDistance*=10
+    return false
+  }
+  for(var i=0; i<6; i++)if(iterFindNotch())return notchDistance
+  return 100000
+}
+function getAxisNotches(from:number,to:number,notchDistance:number){
+  var x=Math.min(to,from)
+  x=Math.floor(x/notchDistance)*notchDistance
+  var end=Math.max(to,from)
+  var notches=[]
+  for(;x<end; x+=notchDistance)
+    if(x!=0)notches.push(x)
+  return notches
+}

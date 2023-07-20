@@ -2,4 +2,4 @@
 
 To run: npm start
 
-<img src="react calc preview">
+<img src="react calc preview.png">

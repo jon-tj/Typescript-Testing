@@ -8,6 +8,11 @@ ul{
 li{
   padding: 1em;
   border-bottom: 1px solid rgb(224, 145, 145);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+li:hover{
+  background-color: rgba(255, 255, 255,0.1);
 }
 li[color="red"]{ background-color: rgb(170,32,54); }
 li[color="green"]{ background-color: rgb(70,153,82); }

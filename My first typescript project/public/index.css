@@ -1,0 +1,18 @@
+ul{
+  list-style-type: none;
+  padding-left: 0;
+  height:40em;
+  overflow-x: hidden;
+}
+li{
+  padding: 1em;
+  border-bottom: 1px solid #ccc;
+}
+li[color="red"]{ background-color: #df7676; }
+li[color="green"]{ background-color: #a1e690; }
+li[color="info"]{font-style: italic;background-color: #ddd;}
+li.selected{
+  background-color: rgb(255, 215, 215);
+}
+h2,h3{margin: 0;}
+ul{margin: 0;}

@@ -3,11 +3,12 @@
 
 // Types
 type Point={x:number, y:number}
+type Vector={x:number, y:number,x0:number,y0:number}
 
 class Viewport{
   x=0; y=0; w=0; h=0;
   constructor(){
-    this.x=2
+    this.x=0
     this.y=1
     this.h=8
     this.w=this.h*window.innerWidth/window.innerHeight
@@ -39,19 +40,19 @@ class Viewport{
     var mx=this.revertX(mousePos.x)
     var my=this.revertY(mousePos.y)
     if(offset<0){
-      var dx=(mx-this.x)*(1-1/1.3)
+      var dx=(mx-this.x)*(1-1/1.1)
       this.x+=dx
-      var dy=(my-this.y)*(1-1/1.3)
+      var dy=(my-this.y)*(1-1/1.1)
       this.y+=dy
-      this.w/=1.3 // only scaling w,h leads to zooming about the origin
-      this.h/=1.3
+      this.w/=1.1 // only scaling w,h leads to zooming about the origin
+      this.h/=1.1
     }else{
-      var dx=(mx-this.x)*(1-1.3)
+      var dx=(mx-this.x)*(1-1.1)
       this.x+=dx
-      var dy=(my-this.y)*(1-1.3)
+      var dy=(my-this.y)*(1-1.1)
       this.y+=dy
-      this.w*=1.3
-      this.h*=1.3
+      this.w*=1.1
+      this.h*=1.1
     }
   }
 }
@@ -63,6 +64,7 @@ const view=new Viewport()
 let mousePos={x:0,y:0}
 let graphs={} as {[key:string]:Function}
 let points={} as {[key:string]:Point}
+let vectors={'_temporary_':{x:0,y:0,x0:0,y0:0}} as {[key:string]:Vector}
 let mouseMomentum={x:0,y:0}
 let mouseButton=0
 const graphColors=[
@@ -105,6 +107,7 @@ else{
 }, false);
 }
 setInterval(()=>{
+  if(Math.abs(mouseMomentum.x)+Math.abs(mouseMomentum.x)<0.0001)return
   GraphViewRender(canvas,ctx!)
   if(mouseButton!=1) view.pan(mouseMomentum)
   mouseMomentum.x*=0.9
@@ -112,8 +115,9 @@ setInterval(()=>{
 },0.1)
 
 // Draw graphs on the canvas
-function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D){
+function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,includeTemporary:boolean=false){
   clearCanvas()
+  ctx.font="16px Arial"
 
   // TODO: Axes overlap >:(
 
@@ -145,7 +149,7 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D)
   // Y-axis
   ctx.strokeStyle="#bbb"
   ctx.beginPath()
-  var xT=clamp(view.transformX(),360,canvas.width-10)
+  var xT=clamp(view.transformX(),calcWindow.clientWidth+10,canvas.width-10)
   ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
   ctx.stroke()
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
@@ -161,19 +165,60 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D)
   })
 
   // Graphs
-  ctx.font="16px Arial"
   var graphIdx=0
   for(var g in graphs){
-    ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-    ctx.fillText(g+"(x)",360,18+graphIdx*22)
+    if(g=="_temporary_"){
+      if(includeTemporary){
+        ctx.strokeStyle="#acc"
+      }
+      else continue
+    }else{
+      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
+      ctx.fillText(g+"(x)",calcWindow.clientWidth+10,18+graphIdx*22)
+      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+      graphIdx++
+    }
     var pointOnGraph=view.transformPoint(view.x,graphs[g](view.x))
     ctx.moveTo(pointOnGraph.x,pointOnGraph.y)
     ctx.beginPath()
-    for(var x=view.x-view.w; x<view.x+view.w+0.1; x+=0.1){ //+0.1 to render even when partially off-cam
-      pointOnGraph=view.transformPoint(x,graphs[g](x))
-      ctx.lineTo(pointOnGraph.x,pointOnGraph.y)
+    var inc=view.w*0.0004
+    for(var x=view.x-view.w; x<view.x+view.w+inc; x+=inc){ //+1 inc to render even when partially off-cam
+      var pointOnGraph1=view.transformPoint(x,graphs[g](x))
+      if(Math.abs(pointOnGraph1.y-pointOnGraph.y)>1000)
+        ctx.moveTo(pointOnGraph1.x,pointOnGraph1.y)
+      else ctx.lineTo(pointOnGraph1.x,pointOnGraph1.y)
+      pointOnGraph=pointOnGraph1
     }
-    ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+    
+    ctx.stroke()
+  }
+
+  // Vectors
+  graphIdx=0
+  for(var v in vectors){
+    var endX=view.transformX(vectors[v].x)
+    var endY=view.transformY(vectors[v].y)
+    var startX=view.transformX(vectors[v].x0)
+    var startY=view.transformY(vectors[v].y0)
+    var offsetY=sign(endY-startY)*12+5
+    if(v=="_temporary_"){
+      ctx.strokeStyle="#acc"
+      graphIdx--
+    }else{
+      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
+      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+      ctx.fillText(v,endX,endY+offsetY)
+    }
+    ctx.beginPath()
+    ctx.moveTo(startX,startY)
+    ctx.lineTo(endX,endY)
+    var magnitude=Math.sqrt((vectors[v].x-vectors[v].x0)**2+(vectors[v].y-vectors[v].y0)**2)
+    var normX=(vectors[v].x-vectors[v].x0)/magnitude
+    var normY=(vectors[v].y-vectors[v].y0)/magnitude
+    var arrowHeadSize=Math.min(magnitude*0.1,0.2)
+    ctx.lineTo(view.transformX(vectors[v].x+(normY-normX)*arrowHeadSize),view.transformY(vectors[v].y-(normX+normY)*arrowHeadSize))
+    ctx.moveTo(endX,endY)
+    ctx.lineTo(view.transformX(vectors[v].x-(normY+normX)*arrowHeadSize),view.transformY(vectors[v].y+(normX-normY)*arrowHeadSize))
     ctx.stroke()
     graphIdx++
   }
@@ -192,7 +237,7 @@ function clamp(x:number,min:number,max:number){
   if(x>max)return max
   return x
 }
-function getNotchInterval(from:number,to:number,nNotchesOptimal:number=40){
+function getNotchInterval(from:number,to:number,nNotchesOptimal:number=35){
   var range=Math.abs(to-from)
   var optimalNotchDistance=100*range/nNotchesOptimal
   var notchDistance=0.01

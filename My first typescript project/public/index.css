@@ -53,11 +53,13 @@ canvas{
   min-height: 6.5em;
   left: 1em;
   right: 1em;
+  overflow-x: hidden;
 }
 #calc-window{
   z-index: 1;
   opacity: 0.9;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, border-right 0.3s;
+  border-right: 3px solid white;
   position: absolute;
   top:0;left:0;bottom: 0;
   background-color: rgb(126, 59, 59);
@@ -69,5 +71,22 @@ canvas{
   opacity: 1;
 }
 #log-box{
-  height:100%;
+  height:calc(100% - 7em);
+}
+#calc-window-drag-area{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left:calc(100% - 1em);
+  right:-1em;
+  z-index: 100;
+}
+input[type=range]{
+float:right;
+width:calc(100% - 5em);
+position:relative;
+top:-2em;
+}
+li>p{
+  margin:0
 }

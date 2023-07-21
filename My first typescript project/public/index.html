@@ -13,9 +13,10 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="window-container">
       <aside id="calc-window">
+        <div id="calc-window-drag-area"></div>
         <ul id="log-box"></ul>
         <form id="console-form">
-          <input type="text" id="console-input">
+          <input type="text" id="console-input" placeholder="hmm somethings not right">
           <p id="output-field"></p>
         </form>
         <script src="/dist/calc.js"></script>
@@ -25,6 +26,13 @@
         <script>
           canvas.width=window.innerWidth;
           canvas.height=window.innerHeight;
+          addEventListener("resize", (e)=>{
+            canvas.width=window.innerWidth;
+            canvas.height=window.innerHeight;
+            view.w=view.h*window.innerWidth/window.innerHeight
+            GraphViewRender(canvas,ctx);
+
+          });
         </script>
         <script src="/dist/index.js"></script>
       </aside>

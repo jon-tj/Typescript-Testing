@@ -2,8 +2,8 @@
 /// <reference path="calc.ts"/> 
 
 // Types
-type Point={x:number, y:number}
-type Vector={x:number, y:number,x0:number,y0:number}
+type Point={x:number, y:number,update:any}|null
+type Vector={x:number, y:number,x0:number,y0:number,update:any}|null
 
 class Viewport{
   x=0; y=0; w=0; h=0;
@@ -17,7 +17,7 @@ class Viewport{
     return (x-min1)/(max1-min1)*(max2-min2)+min2
   }
   transformPoint(x:number=0,y:number=0):Point{
-    return { x:this.transformX(x),y:this.transformY(y) }
+    return { x:this.transformX(x),y:this.transformY(y),update:false }
   }
   transformX(x:number=0):number{
     return this.remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
@@ -32,8 +32,8 @@ class Viewport{
     return this.remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
   }
   pan(offset:Point):void{
-    this.x+=offset.x*(2*this.w)/canvas.width
-    this.y-=offset.y*(2*this.h)/canvas.height
+    this.x+=offset!.x*(2*this.w)/canvas.width
+    this.y-=offset!.y*(2*this.h)/canvas.height
   }
   zoom(offset:number):void{
     // mx,my are used to zoom in at the cursor
@@ -61,11 +61,11 @@ class Viewport{
 const canvas=document.querySelector<HTMLCanvasElement>("#canvas")!; // saves me some headache
 const ctx=canvas.getContext("2d");
 const view=new Viewport()
-let mousePos={x:0,y:0}
-let graphs={} as {[key:string]:Function}
+let mousePos={x:0,y:0,update:false }
+let graphs={} as {[key:string]:Function|null}
 let points={} as {[key:string]:Point}
-let vectors={'_temporary_':{x:0,y:0,x0:0,y0:0}} as {[key:string]:Vector}
-let mouseMomentum={x:0,y:0}
+let vectors={'_temporary_':{x:0,y:0,x0:0,y0:0,update:false }} as {[key:string]:Vector}
+let mouseMomentum={x:0,y:0,update:false }
 let mouseButton=0
 const graphColors=[
   "#222", // Default Gray
@@ -80,23 +80,31 @@ const graphColors=[
   "#2980b9", // Dark Blue
   "#d35400"  // Pumpkin Orange
 ]
+const alphabet="abcdefghijklmnopqrstuvwxyz"
 
 // Setup rendering
 if(!ctx || !canvas) console.log("Error getting canvas")
 else{
   GraphViewRender(canvas,ctx)
-  canvas.addEventListener("mousedown",(e)=>{
-    //what to do hmmm
+  canvas.addEventListener("dblclick",(e)=>{
+    var abcIdx=0
+    for(; abcIdx<alphabet.length; abcIdx++)
+      if(!points[alphabet[abcIdx]])break
+    var x=view.revertX(e.x)
+    var y=view.revertY(e.y)
+    points[alphabet[abcIdx]]={x:x,y:y,update:false }
+    print(alphabet[abcIdx]+"=("+x+";"+y,alphabet[abcIdx]+"=("+x+";"+y,true,"p"+alphabet[abcIdx])
+    GraphViewRender(canvas,ctx)
   })
   canvas.addEventListener("mousemove",(e)=>{
-    var newMousePos={x:e.x,y:e.y}
+    var newMousePos={x:e.x,y:e.y,update:false }
     var mouseMoveDelta=PointOffset(mousePos,newMousePos)
     mouseButton=e.buttons
     if(e.buttons==1){
       view.pan(mouseMoveDelta)
       GraphViewRender(canvas,ctx)
-      mouseMomentum.x=mouseMoveDelta.x*0.2+mouseMomentum.x*0.8
-      mouseMomentum.y=mouseMoveDelta.y*0.2+mouseMomentum.y*0.8
+      mouseMomentum.x=mouseMoveDelta!.x*0.2+mouseMomentum.x*0.8
+      mouseMomentum.y=mouseMoveDelta!.y*0.2+mouseMomentum.y*0.8
     }
     mousePos=newMousePos
   })
@@ -167,6 +175,7 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
   // Graphs
   var graphIdx=0
   for(var g in graphs){
+    if(!graphs[g])continue
     if(g=="_temporary_"){
       if(includeTemporary){
         ctx.strokeStyle="#acc"
@@ -178,15 +187,15 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
       ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
       graphIdx++
     }
-    var pointOnGraph=view.transformPoint(view.x,graphs[g](view.x))
-    ctx.moveTo(pointOnGraph.x,pointOnGraph.y)
+    var pointOnGraph=view.transformPoint(view.x,graphs[g]!(view.x))
+    ctx.moveTo(pointOnGraph!.x,pointOnGraph!.y)
     ctx.beginPath()
     var inc=view.w*0.0004
     for(var x=view.x-view.w; x<view.x+view.w+inc; x+=inc){ //+1 inc to render even when partially off-cam
-      var pointOnGraph1=view.transformPoint(x,graphs[g](x))
-      if(Math.abs(pointOnGraph1.y-pointOnGraph.y)>1000)
-        ctx.moveTo(pointOnGraph1.x,pointOnGraph1.y)
-      else ctx.lineTo(pointOnGraph1.x,pointOnGraph1.y)
+      var pointOnGraph1=view.transformPoint(x,graphs[g]!(x))
+      if(Math.abs(pointOnGraph1!.y-pointOnGraph!.y)>1000)
+        ctx.moveTo(pointOnGraph1!.x,pointOnGraph1!.y)
+      else ctx.lineTo(pointOnGraph1!.x,pointOnGraph1!.y)
       pointOnGraph=pointOnGraph1
     }
     
@@ -196,12 +205,15 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
   // Vectors
   graphIdx=0
   for(var v in vectors){
-    var endX=view.transformX(vectors[v].x)
-    var endY=view.transformY(vectors[v].y)
-    var startX=view.transformX(vectors[v].x0)
-    var startY=view.transformY(vectors[v].y0)
+    if(!vectors[v])continue
+    if(vectors[v]!.update)vectors[v]!.update()
+    var endX=view.transformX(vectors[v]!.x)
+    var endY=view.transformY(vectors[v]!.y)
+    var startX=view.transformX(vectors[v]!.x0)
+    var startY=view.transformY(vectors[v]!.y0)
     var offsetY=sign(endY-startY)*12+5
     if(v=="_temporary_"){
+      if(!includeTemporary) continue
       ctx.strokeStyle="#acc"
       graphIdx--
     }else{
@@ -212,21 +224,44 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     ctx.beginPath()
     ctx.moveTo(startX,startY)
     ctx.lineTo(endX,endY)
-    var magnitude=Math.sqrt((vectors[v].x-vectors[v].x0)**2+(vectors[v].y-vectors[v].y0)**2)
-    var normX=(vectors[v].x-vectors[v].x0)/magnitude
-    var normY=(vectors[v].y-vectors[v].y0)/magnitude
+    var magnitude=Math.sqrt((vectors[v]!.x-vectors[v]!.x0)**2+(vectors[v]!.y-vectors[v]!.y0)**2)
+    var normX=(vectors[v]!.x-vectors[v]!.x0)/magnitude
+    var normY=(vectors[v]!.y-vectors[v]!.y0)/magnitude
     var arrowHeadSize=Math.min(magnitude*0.1,0.2)
-    ctx.lineTo(view.transformX(vectors[v].x+(normY-normX)*arrowHeadSize),view.transformY(vectors[v].y-(normX+normY)*arrowHeadSize))
+    ctx.lineTo(view.transformX(vectors[v]!.x+(normY-normX)*arrowHeadSize),view.transformY(vectors[v]!.y-(normX+normY)*arrowHeadSize))
     ctx.moveTo(endX,endY)
-    ctx.lineTo(view.transformX(vectors[v].x-(normY+normX)*arrowHeadSize),view.transformY(vectors[v].y+(normX-normY)*arrowHeadSize))
+    ctx.lineTo(view.transformX(vectors[v]!.x-(normY+normX)*arrowHeadSize),view.transformY(vectors[v]!.y+(normX-normY)*arrowHeadSize))
     ctx.stroke()
+    graphIdx++
+  }
+  
+  // Points
+  graphIdx=0
+  for(var p in points){
+    if(!points[p])continue
+    if(points[p]!.update)points[p]!.update()
+    var x=view.transformX(points[p]!.x)
+    var y=view.transformY(points[p]!.y)
+    if(p=="_temporary_"){
+      if(!includeTemporary) continue
+      ctx.strokeStyle="#acc"
+      graphIdx--
+    }else{
+      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
+      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+      ctx.fillText(p,x+8,y+5)
+    }
+    ctx.fillStyle = graphColors[graphIdx%graphColors.length];
+    ctx.beginPath();
+    ctx.arc(x,y, 6, 0, 2 * Math.PI);
+    ctx.fill();
     graphIdx++
   }
 }
 
 // Helper functions
 function PointOffset(a:Point,b:Point):Point{
-  return {x:a.x-b.x,y:a.y-b.y}
+  return {x:a!.x-b!.x,y:a!.y-b!.y,update:false }
 }
 function clearCanvas(){
   ctx!.fillStyle="white"

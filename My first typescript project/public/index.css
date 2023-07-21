@@ -28,6 +28,7 @@ ul{margin: 0;}
   grid-template-columns: 350px 0;
 }
 canvas{
+  user-select: none;
   position: absolute;
   top:0;
   right:0;
@@ -90,3 +91,17 @@ top:-2em;
 li>p{
   margin:0
 }
+#navbar{background-color:rgb(92, 43, 43) ;}
+#navbar>button{
+  background-color: transparent;
+  border: none;
+  padding:0.3em;
+  transition: background-color 0.1s;
+  margin-right: -4px;
+}
+#navbar>button:hover{
+  background-color: rgb(139, 79, 79);
+}
+
+/* Buttons in navbar*/
+#trash-button{transition: transform .1s;}

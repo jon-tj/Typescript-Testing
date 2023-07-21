@@ -107,6 +107,10 @@ function tryEval(evalString:string) {
   } catch (error) {return false;}
 }
 function inputReceived(msg:string,printLog:boolean=true){
+  vectors['_temporary_']=null
+  points['_temporary_']=null
+  graphs['_temporary_']=null
+  GraphViewRender(canvas,ctx!)
   var msgNoWhitespace=msg.replaceAll(" ","")
   if(msg[0]=="/"){
     //This is a direct command, we just eval
@@ -129,18 +133,26 @@ function inputReceived(msg:string,printLog:boolean=true){
     if(displayName==""){
 
       for(var i=Object.keys(vectors).length; i<1000; i++)
-        if(!vectors["v"+i])break
-      displayName="v"+i
+        if(!points["p"+i])break
+      displayName="p"+i
     }
+    var args1=definitionString.substring(1).replace("]","").split(/[;,]/)
     if(printLog){
-      var args1=definitionString.substring(1).replace("]","").split(/[;,]/)
-      vectors[displayName]={x:myEvalFunc(args1[0]),y:myEvalFunc(args1[1]),x0:0,y0:0}
+      var updateFunc="false"
+      if(lookupVariables(args1[0]).includes("variables") || lookupVariables(args1[1]).includes("variables")){
+        eval("update_"+displayName+"=()=>{points[displayName].x=myEvalFunc(args1[0]);points[displayName].y=myEvalFunc(args1[1])}")
+        updateFunc="update_"+displayName
+      }
+      eval("points[displayName]={x:myEvalFunc(args1[0]),y:myEvalFunc(args1[1]),x0:0,y0:0,update:"+updateFunc+"}")
     }else{
-      if(selectedLogIdx>=0)
-      deleteInLog(logBox!.children[selectedLogIdx].getAttribute("name")!)
+      if(selectedLogIdx>=0){
+        deleteInLog(logBox!.children[selectedLogIdx].getAttribute("name")!)
+      }
+      if(args1.length>1)
+      tryEval("points['_temporary_']={x:"+myEvalFunc(args1[0])+",y:"+myEvalFunc(args1[1])+",update:false}")
     }
-    print(mathString(displayName+"="+definitionString),displayName+"="+msg,printLog,"V"+displayName)
-    GraphViewRender(canvas,ctx!)
+    print(mathString(displayName+"="+definitionString),displayName+"="+msg,printLog,"p"+displayName)
+    GraphViewRender(canvas,ctx!,!printLog)
     return
   
   }
@@ -153,17 +165,22 @@ function inputReceived(msg:string,printLog:boolean=true){
     }
     var args1=definitionString.substring(1).replace("]","").split(/[;,]/)
     if(printLog){
-      vectors[displayName]={x:myEvalFunc(args1[0]),y:myEvalFunc(args1[1]),x0:0,y0:0}
+      var updateFunc="false"
+      if(lookupVariables(args1[0]).includes("variables") || lookupVariables(args1[1]).includes("variables")){
+        eval("update_"+displayName+"=()=>{vectors[displayName].x=myEvalFunc(args1[0]);vectors[displayName].y=myEvalFunc(args1[1])}")
+        updateFunc="update_"+displayName
+      }
+      eval("vectors[displayName]={x:myEvalFunc(args1[0]),y:myEvalFunc(args1[1]),x0:0,y0:0,update:"+updateFunc+"}")
+      GraphViewRender(canvas,ctx!)
     }else{
       if(selectedLogIdx>=0){
         deleteInLog(logBox!.children[selectedLogIdx].getAttribute("name")!)
       }
       if(args1.length>1)
-      tryEval("vectors['_temporary_']={x:"+myEvalFunc(args1[0])+",y:"+myEvalFunc(args1[1])+",x0:0,y0:0}")
+      tryEval("vectors['_temporary_']={x:"+myEvalFunc(args1[0])+",y:"+myEvalFunc(args1[1])+",x0:0,y0:0,update:false}")
       GraphViewRender(canvas,ctx!,true)
     }
     print(mathString(displayName+"="+definitionString),displayName+"="+msg,printLog,"V"+displayName)
-    GraphViewRender(canvas,ctx!)
     return
   }
 
@@ -428,6 +445,9 @@ function deleteInLog(name:string){
   }
   else if(name[0]=="V" && vectors[name.substring(1)]){
     delete vectors[name.substring(1)]
+  }
+  else if(name[0]=="p" && points[name.substring(1)]){
+    delete points[name.substring(1)]
   }
   GraphViewRender(canvas,ctx!)
 }

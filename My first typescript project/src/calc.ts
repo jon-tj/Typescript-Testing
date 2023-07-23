@@ -192,8 +192,8 @@ function inputReceived(msg:string,printLog:boolean=true){
       var func=eval("tempFunc=()=>{return ("+msg.substring(1)+")}")
       var output=eval("tempFunc()")
       if(output)
-        print(msg.substring(1)+"<br>="+output,msg,printLog,"",NaN,()=>0,func)
-      else print(msg.substring(1),msg,printLog,"",NaN,()=>0,func)
+        print(msg.substring(1)+"<br>="+output.toString().replaceAll(/,(\d+)/g,", $1"),msg,printLog,"",NaN,()=>0,func,msg.substring(1)+"<br>=")
+      else print(msg.substring(1),msg,printLog,"",NaN,()=>0,func,msg.substring(1)+"<br>=")
       GraphViewRender(canvas,ctx!)
     }else
       print(msg.substring(1),msg,printLog)
@@ -555,7 +555,7 @@ function mathString(msg:string){
 }
 
 // write to the log
-function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sliderValue:number=NaN,sliderFunction:Function=()=>0,executable:any=false){
+function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sliderValue:number=NaN,sliderFunction:Function=()=>0,executable:any=false,msgBeforeExecution:string=""){
   if(msg.length>70 && !executable){ // don't truncate code snippets >:(
     msg=msg.substring(0,30)+" ... "+msg.substring(msg.length-30)
   }
@@ -593,8 +593,15 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
         q1.children[0].innerHTML=msg
       }else{
         if(executable){ // code snippets have a button
-          q1.innerHTML="<button><img src='icons/execute.png'></button><p>"+msg+"</p>"
-          q1.children[0].addEventListener("click",(e)=>executable())
+          var pid=generateCustomID(msg)
+          q1.innerHTML="<button><img src='icons/execute.png'></button><p id="+pid+">"+msg+"</p>"
+          q1.children[0].addEventListener("click",(e)=>{
+            var output=executable()
+            GraphViewRender(canvas,ctx!)
+            console.log(pid)
+            if(output || output==false || output==0)
+            document.getElementById(pid)!.innerHTML=msgBeforeExecution+output.toString().replaceAll(/,(\d+)/g,", $1")
+          })
         }
         else
         q1.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
@@ -629,9 +636,17 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
         createSlider(q)
       else{
         if(executable){ // code snippets have a button
-          q.innerHTML="<button><img src='icons/execute.png'></button><p>"+msg+"</p>"
-          q.children[0].addEventListener("click",(e)=>executable())
-        }
+          var pid=generateCustomID(msg)
+          q.innerHTML="<button><img src='icons/execute.png'></button><p id="+pid+">"+msg+"</p>"
+          q.children[0].addEventListener("click",(e)=>{
+            var output=executable()
+            GraphViewRender(canvas,ctx!)
+            console.log(pid)
+            if(output || output==false || output==0)
+            document.getElementById(pid)!.innerHTML=msgBeforeExecution+output.toString().replaceAll(/,(\d+)/g,", $1")
+          })
+        }else
+        q.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
       }
     }
   }else
@@ -655,7 +670,18 @@ function deleteInLog(name:string){
   }
   GraphViewRender(canvas,ctx!)
 }
-
+function generateCustomID(seed:string) {
+  // simple hasher for unique IDs
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const charCode = seed.charCodeAt(i);
+    hash = (hash << 5) - hash + charCode;
+    hash &= hash; // Convert to 32-bit integer (optional, depending on your use case)
+  }
+  hash = Math.abs(hash);
+  const customID = hash.toString(16);
+  return customID;
+}
 
 var placeholders=[
   "sin(x)",

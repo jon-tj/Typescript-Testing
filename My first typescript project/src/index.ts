@@ -5,6 +5,100 @@
 type Point={x:number, y:number,update:any}|null
 type Vector={x:number, y:number,x0:number,y0:number,update:any}|null
 
+class Matrix{
+  cells:number[][]
+  rows:number
+  columns:number
+  update:Function
+
+  constructor(cells:number[][],rows:number,columns:number=1,update:any=false){
+    this.cells=cells // [[a,b],[c,d]]
+    this.rows=rows
+    this.columns=columns
+    this.update=update
+  }
+  get(row:number,column:number=0){
+    return this.cells[row][column]
+  }
+  set(value:number,row:number,column:number=0){
+    this.cells[row][column]=value
+  }
+  iter(f:Function){
+    for(var i=0; i<this.rows; i++)
+      for(var j=0; j<this.columns; j++)
+        this.set(f(i,j),i,j)
+  }
+  max(){
+    var maxVal=this.cells[0][0]
+    for(var i=0; i<this.rows; i++)
+      for(var j=0; j<this.columns; j++)
+        maxVal=Math.max(maxVal,this.get(i,j))
+    return maxVal
+  }
+  min(){
+    var minVal=this.cells[0][0]
+    for(var i=0; i<this.rows; i++)
+      for(var j=0; j<this.columns; j++)
+      minVal=Math.min(minVal,this.get(i,j))
+    return minVal
+  }
+  column(j:number=0){
+    var res=[]
+    for(var i=0; i<this.rows; i++) res.push(this.get(i,j))
+    return res
+  }
+  row(i:number=0){
+    var res=[]
+    for(var j=0; j<this.columns; j++) res.push(this.get(i,j))
+    return res
+  }
+  rownorm(){
+    for(var i=0; i<this.rows; i++){
+      var row=this.row(i)
+      var mean=0
+      for(var j=0; j<row.length; j++) mean+=row[j]
+      mean/=row.length
+      var std=0
+      for(var j=0; j<this.columns; j++) std+=(this.get(i,j)-mean)**2
+      std=Math.sqrt(std/row.length)
+      for(var j=0; j<this.columns; j++) this.set((this.get(i,j)-mean)/std,i,j)
+    }
+  }
+  colnorm(){
+    for(var i=0; i<this.columns; i++){
+      var column=this.column(i)
+      var mean=0
+      for(var j=0; j<column.length; j++) mean+=column[j]
+      mean/=column.length
+      var std=0
+      for(var j=0; j<this.rows; j++) std+=(this.get(j,i)-mean)**2
+      std=Math.sqrt(std/column.length)
+      for(var j=0; j<this.rows; j++) this.set((this.get(j,i)-mean)/std,j,i)
+    }
+  }
+  transpose(){
+    var res=[]
+    for(var j=0; j<this.rows; j++){
+      var row=[]
+      for(var i=0; i<this.columns; i++){
+        row.push(this.get(i,j))
+      }
+      res.push(row)
+    }
+    this.cells=res
+    var temp=this.columns
+    this.columns=this.rows
+    this.rows=temp
+
+  }
+  mulVec(v:number[]){
+    return this.mul(new Matrix([v],v.length)) // cast to column vector
+  }
+  mul(m:Matrix){
+    throw("Not implemented yet")
+  }
+}
+
 class Viewport{
   x=0; y=0; w=0; h=0;
   constructor(){
@@ -18,6 +112,12 @@ class Viewport{
   }
   transformPoint(x:number=0,y:number=0):Point{
     return { x:this.transformX(x),y:this.transformY(y),update:false }
+  }
+  dx(){
+    return canvas.width/this.w*0.5
+  }
+  dy(){
+    return canvas.height/this.h*0.5
   }
   transformX(x:number=0):number{
     return this.remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
@@ -64,6 +164,7 @@ const view=new Viewport()
 let mousePos={x:0,y:0,update:false }
 let graphs={} as {[key:string]:Function|null}
 let points={} as {[key:string]:Point}
+let matrices={} as {[key:string]:Matrix}
 let vectors={'_temporary_':{x:0,y:0,x0:0,y0:0,update:false }} as {[key:string]:Vector}
 let mouseMomentum={x:0,y:0,update:false }
 let mouseButton=0
@@ -90,10 +191,10 @@ else{
     var abcIdx=0
     for(; abcIdx<alphabet.length; abcIdx++)
       if(!points[alphabet[abcIdx]])break
-    var x=view.revertX(e.x)
-    var y=view.revertY(e.y)
+    var x=Math.round(view.revertX(e.x)*10000)/10000
+    var y=Math.round(view.revertY(e.y)*10000)/10000
     points[alphabet[abcIdx]]={x:x,y:y,update:false }
-    print(alphabet[abcIdx]+"=("+x+";"+y,alphabet[abcIdx]+"=("+x+";"+y,true,"p"+alphabet[abcIdx])
+    print(alphabet[abcIdx]+"=("+x+", "+y+")",alphabet[abcIdx]+"=("+x+", "+y+")",true,"p"+alphabet[abcIdx])
     GraphViewRender(canvas,ctx)
   })
   canvas.addEventListener("mousemove",(e)=>{
@@ -138,7 +239,7 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
   ctx.fillStyle="#777"
   ctx.strokeStyle="#bbb"
   ctx.beginPath()
-  var yT=clamp(view.transformY(),10,canvas.height-15)
+  var yT=clamp(view.transformY(),5,canvas.height-23)
   ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
   ctx.stroke()
   var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w)
@@ -151,13 +252,14 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     ctx.strokeStyle="#eee"
     ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.height)
     if(x!=0)ctx.stroke()
-    ctx.fillText(Round2(x),xT+3,yT+12)
+    ctx.fillText(Round2(x),xT-8,yT+18)
   })
   
   // Y-axis
   ctx.strokeStyle="#bbb"
   ctx.beginPath()
-  var xT=clamp(view.transformX(),calcWindow.clientWidth+10,canvas.width-10)
+  var xT=clamp(view.transformX(),Math.max(50,calcWindow.clientWidth+8),canvas.width-8) //honestly i just like these numbers, no meaning behind them
+  var drawNumbersOnRightSide=xT<100+calcWindow.clientWidth
   ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
   ctx.stroke()
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
@@ -169,11 +271,55 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     ctx.strokeStyle="#eee"
     ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
     if(y!=0)ctx.stroke()
-    ctx.fillText(Round2(y),xT+10,yT+5)
+    var yString=Round2(y)
+    var stringWidth=ctx.measureText(yString).width
+    ctx.fillText(yString,xT-10-stringWidth+(drawNumbersOnRightSide?+20+stringWidth:0),yT+5)
   })
+
+  // Matrices
+  graphIdx=0
+  for(var m in matrices){
+    if(!matrices[m])continue
+    if(matrices[m]!.update)matrices[m]!.update()
+
+    if(m=="_temporary_"){
+      if(!includeTemporary) continue
+      ctx.strokeStyle="#acc"
+      graphIdx--
+    }
+    ctx.fillText(m,view.transformX(0),view.transformY(0))
+    ctx.fillStyle="white"
+    var x0=view.transformX(0)
+    var y0=view.transformY(0)
+    ctx.fillRect(x0,y0,view.transformX(matrices[m].columns)-x0-1,view.transformY(-matrices[m].rows)-y0-1)
+    ctx.fillStyle=graphColors[graphIdx%graphColors.length]
+    ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
+
+    var min=matrices[m].min()
+    var max=matrices[m].max()
+    var dx=view.dx()
+    var dy=view.dy()
+    for(var i=0; i<matrices[m].rows; i++){
+      for(var j=0; j<matrices[m].columns; j++){
+        
+        ctx.fillStyle="hsl("+view.remap(matrices[m].get(i,j),min,max,230,0)+", 80%, 50%)"
+        ctx.fillRect(view.transformX(j)-1,view.transformY(-i)-1,dx,dy)
+        if(view.h>8)continue
+        ctx.fillStyle=graphColors[0]
+        ctx.fillText(matrices[m].get(i,j).toString(),view.transformX(j+0.5)-5,view.transformY(-i-0.5)+5)
+      }
+    }
+    graphIdx++
+  }
 
   // Graphs
   var graphIdx=0
+  var textY=25
+  var textX=Math.max(45,calcWindow.clientWidth+10)
+  if(calcWindow.clientWidth<15){
+    textY=240
+    textX=14
+  }
   for(var g in graphs){
     if(!graphs[g])continue
     if(g=="_temporary_"){
@@ -183,20 +329,22 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
       else continue
     }else{
       ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-      ctx.fillText(g+"(x)",calcWindow.clientWidth+10,18+graphIdx*22)
+      ctx.fillText(g+"(x)",textX,textY)
+      textY+=25
       ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
       graphIdx++
     }
-    var pointOnGraph=view.transformPoint(view.x,graphs[g]!(view.x))
+    var pointOnGraph=view.transformPoint(view.x,graphs[g]!(view.x))!
     ctx.moveTo(pointOnGraph!.x,pointOnGraph!.y)
     ctx.beginPath()
     var inc=view.w*0.0004
     for(var x=view.x-view.w; x<view.x+view.w+inc; x+=inc){ //+1 inc to render even when partially off-cam
-      var pointOnGraph1=view.transformPoint(x,graphs[g]!(x))
-      if(Math.abs(pointOnGraph1!.y-pointOnGraph!.y)>1000)
-        ctx.moveTo(pointOnGraph1!.x,pointOnGraph1!.y)
-      else ctx.lineTo(pointOnGraph1!.x,pointOnGraph1!.y)
-      pointOnGraph=pointOnGraph1
+      pointOnGraph=view.transformPoint(x,graphs[g]!(x))!
+      
+      var render:boolean=(pointOnGraph.y<canvas.height && pointOnGraph.y>0)
+      if(render)ctx.lineTo(pointOnGraph.x,pointOnGraph.y)
+      // overshoot a little so lines coming onto the screen have the correct direction
+      else ctx.moveTo(pointOnGraph.x,clamp(pointOnGraph.y,-100,canvas.height+100)) 
     }
     
     ctx.stroke()
@@ -211,7 +359,7 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     var endY=view.transformY(vectors[v]!.y)
     var startX=view.transformX(vectors[v]!.x0)
     var startY=view.transformY(vectors[v]!.y0)
-    var offsetY=sign(endY-startY)*12+5
+    var offsetY=Math.sign(endY-startY)*12+5
     if(v=="_temporary_"){
       if(!includeTemporary) continue
       ctx.strokeStyle="#acc"
@@ -257,6 +405,8 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     ctx.fill();
     graphIdx++
   }
+  
+  
 }
 
 // Helper functions

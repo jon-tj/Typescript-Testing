@@ -35,13 +35,13 @@
         <div id="calc-window-drag-area"></div>
         <ul id="log-box"></ul>
         <form id="console-form">
-          <input type="text" id="console-input" placeholder="hmm somethings not right">
+          <input type="text" id="console-input" tabindex="2">
           <p id="output-field"></p>
         </form>
         <script src="/dist/calc.js"></script>
       </aside>
       <aside id="graph-window">
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" tabindex="1"></canvas>
         <script>
           canvas.width=window.innerWidth;
           canvas.height=window.innerHeight;
@@ -55,6 +55,7 @@
         </script>
         <script src="/dist/index.js"></script>
         <script src="/dist/navbar.js"></script>
+        <script src="/dist/rootFinder.js"></script>
       </aside>
     </div>
     

@@ -18,6 +18,22 @@ let synonyms={
   "Mathf":"Math",
   "math":"Math",
   "Math.Clamp":"clamp",
+  
+  "asinh":"Math.asinh",
+  "acosh":"Math.acosh",
+  "atanh":"Math.atanh",
+
+  "asin":"Math.asin",
+  "acos":"Math.acos",
+  "atan":"Math.atan",
+
+  "sinh":"Math.sinh",
+  "cosh":"Math.cosh",
+  "tanh":"Math.tanh",
+
+  "sin":"Math.sin",
+  "cos":"Math.cos",
+  "tan":"Math.tan",
 } as FunctionLookup
 let selectedLogIdx=-1
 
@@ -110,13 +126,77 @@ function inputReceived(msg:string,printLog:boolean=true){
   vectors['_temporary_']=null
   points['_temporary_']=null
   graphs['_temporary_']=null
+  var msgOriginal=msg
+
+  if((msg.startsWith("roots") || msg.startsWith("extremum")) && msg.match(/[ (]/)){
+    var tf=cleanupFuncString(msg.substring(msg.search(/[ (]/)))
+    if(tryEval("tempFunc=(x)=>{ return ("+tf+")}")){
+      if(typeof(eval("tempFunc(0)"))!=="number") // user has written something like "roots f", without the (x)
+        tryEval("tempFunc="+tf+"")
+      if(msg.startsWith("extremum"))
+        var root=eval("NewtonsGrid( derivateNaive(tempFunc))")
+      else var root=eval("NewtonsGrid( tempFunc)")
+      msg=mathString(msg)
+      
+      if(printLog){
+        var roots=root.split(",")
+        for(var r in roots){
+          points['r'+r]={x:parseFloat(roots[r]),y:eval("tempFunc(roots[r])"),update:false}
+        }
+      }
+      msg+= "<br>="+root
+    }
+    print(msg,msgOriginal,printLog)
+    return
+  }
+  if(msg.startsWith("der")){
+    var displayName=getDisplayName()
+    deleteInLog("g"+displayName)
+    msg=msg.substring(msg.search(/[ (]/))
+    if(printLog){
+      var tf=cleanupFuncString(msg)
+      if(tryEval(displayName+"=derivateNaive((x)=>{ return ("+tf+")})")){
+        var v=eval(displayName+"(0)")
+        if(typeof(v)!=="number" || v.toString()=="NaN") // user has written something like "roots f", without the (x)
+          tryEval(displayName+"=derivateNaive("+tf+")")
+      }
+      eval("graphs[displayName]="+displayName)
+    }
+    print("<span class='large'>&int;</span>"+displayName+ "(x)dx <br><strong>:</strong>= "+msg,msgOriginal,printLog,displayName)
+    return
+  }
+
+  if(msg.startsWith("int")){
+    var displayName=getDisplayName()
+    msg=msg.substring(msg.search(/[ (]/))
+    if(printLog){
+      var tf=cleanupFuncString(msg)
+      if(tryEval("tempFunc=derivateNaive((x)=>{ return ("+tf+")})")){
+        var v=eval("tempFunc(0)")
+        if(typeof(v)!=="number" || v.toString()=="NaN") // user has written something like "roots f", without the (x)
+          tryEval("tempFunc=derivateNaive("+tf+")")
+      }
+      eval("graphs[displayName]=tempFunc")
+    }
+    print("<span class='large'>&int;</span>"+displayName+ "(x)dx <br><strong>:</strong>= "+msg,msgOriginal,printLog)
+    return
+  }
+
   GraphViewRender(canvas,ctx!)
+  msg=balanceParentheses(msg)
   var msgNoWhitespace=msg.replaceAll(" ","")
   if(msg[0]=="/"){
     //This is a direct command, we just eval
-    if(printLog)eval(msg.substring(1))
-    print(msg.substring(1),msg,printLog)
-    GraphViewRender(canvas,ctx!)
+    
+    if(printLog){
+      var func=eval("tempFunc=()=>{return ("+msg.substring(1)+")}")
+      var output=eval("tempFunc()")
+      if(output)
+        print(msg.substring(1)+"<br>="+output,msg,printLog,"",NaN,()=>0,func)
+      else print(msg.substring(1),msg,printLog,"",NaN,()=>0,func)
+      GraphViewRender(canvas,ctx!)
+    }else
+      print(msg.substring(1),msg,printLog)
     return
   }
   if(msg.length==0){
@@ -125,10 +205,10 @@ function inputReceived(msg:string,printLog:boolean=true){
     return
   }
   var msgSplit=msgNoWhitespace.split("=")
-  var definitionString=msgSplit[msgSplit.length-1]
+  var definitionString=balanceParentheses(msgSplit[msgSplit.length-1])
   var displayName=""
   if(msgSplit.length>1) displayName=msgSplit[0]
-  if(definitionString[0]=="("){ // point
+  if(definitionString[0]=="(" && definitionString.match(/[;,]/)){ // point
     
     if(displayName==""){
 
@@ -136,7 +216,7 @@ function inputReceived(msg:string,printLog:boolean=true){
         if(!points["p"+i])break
       displayName="p"+i
     }
-    var args1=definitionString.substring(1).replace("]","").split(/[;,]/)
+    var args1=definitionString.substring(1).split(/[;,]/)
     if(printLog){
       var updateFunc="false"
       if(lookupVariables(args1[0]).includes("variables") || lookupVariables(args1[1]).includes("variables")){
@@ -148,7 +228,6 @@ function inputReceived(msg:string,printLog:boolean=true){
       if(selectedLogIdx>=0){
         deleteInLog(logBox!.children[selectedLogIdx].getAttribute("name")!)
       }
-      if(args1.length>1)
       tryEval("points['_temporary_']={x:"+myEvalFunc(args1[0])+",y:"+myEvalFunc(args1[1])+",update:false}")
     }
     print(mathString(displayName+"="+definitionString),displayName+"="+msg,printLog,"p"+displayName)
@@ -156,6 +235,66 @@ function inputReceived(msg:string,printLog:boolean=true){
     return
   
   }
+
+
+  
+  if(definitionString.startsWith("[[")){ // matrix
+    if(displayName==""){
+
+      for(var i=Object.keys(vectors).length; i<1000; i++)
+        if(!vectors["m"+i])break
+      displayName="m"+i
+    }
+    var args1=definitionString.substring(2,definitionString.indexOf("]")).split(/[;,]/)
+    if(args1.length==1 && definitionString.endsWith(")")){ // iterative notation, [[i+j]](2,2) --> [[0,1],[2,3]] etc
+      var lengthString=definitionString.substring(definitionString.indexOf("(")+1).replace(")","").split(/[,;]/)
+      var rows=parseInt(lengthString[0])
+      var columns=parseInt(lengthString[1])
+      var funcString=cleanupFuncString(definitionString.substring(2,definitionString.indexOf("]")))
+      if(tryEval("tempFunc=(i,j)=>"+funcString) && !isNaN(rows) && !isNaN(columns)){
+
+        definitionString="["
+        for(var i=0; i<rows; i++){
+          var row="["+eval("tempFunc("+i+",0)")
+          for(var j=1; j<columns; j++){
+            row+=", "+eval("tempFunc("+i+","+j+")")
+          }
+          definitionString+=row+"], "
+        }
+        definitionString=definitionString.substring(0,definitionString.length-2)+"]"
+      }
+    }else{
+      try{
+
+        var obj=eval(definitionString) as number[][]
+        var rows=obj.length
+        var columns=obj[0].length
+      }catch{
+        print("?",msg,printLog)
+        return
+      }
+    }
+    
+    if(printLog){
+      var updateFunc="false"
+      if(lookupVariables(definitionString).includes("variables")){
+        eval("update_"+displayName+"=()=>{matrices[displayName].iter((i,j)=>("+definitionString+"))}")
+        updateFunc="update_"+displayName
+      }
+      eval("matrices[displayName]=new Matrix("+definitionString+",rows,columns)")
+      GraphViewRender(canvas,ctx!)
+    }else{
+      if(selectedLogIdx>=0){
+        deleteInLog(logBox!.children[selectedLogIdx].getAttribute("name")!)
+      }
+      tryEval("matrices['_temporary_']=new Matrix("+definitionString+",rows,columns)")
+      GraphViewRender(canvas,ctx!,true)
+    }
+    print(mathString(displayName+"="+definitionString),displayName+"="+msg,printLog,"M"+displayName)
+    return
+  }
+
+
   if(definitionString[0]=="["){ // vector
     if(displayName==""){
 
@@ -164,6 +303,19 @@ function inputReceived(msg:string,printLog:boolean=true){
       displayName="v"+i
     }
     var args1=definitionString.substring(1).replace("]","").split(/[;,]/)
+    if(args1.length==1 && definitionString.endsWith(")")){ // iterative notation, [i+1](4) --> [1,2,3,4] etc
+      var length=parseInt(definitionString.substring(definitionString.indexOf("(")+1).replace(")",""))
+      var funcString=cleanupFuncString(definitionString.substring(1,definitionString.indexOf("]")))
+      if(tryEval("tempFunc=(i)=>"+funcString) && !isNaN(length)){
+
+        definitionString="["+eval("tempFunc(0)")
+        for(var i=1; i<length; i++)
+         definitionString+=", "+eval("tempFunc("+i+")")
+        definitionString+="]"
+      }
+      args1=definitionString.substring(1).replace("]","").split(/[;,]/)
+      
+    }
     if(printLog){
       var updateFunc="false"
       if(lookupVariables(args1[0]).includes("variables") || lookupVariables(args1[1]).includes("variables")){
@@ -184,46 +336,25 @@ function inputReceived(msg:string,printLog:boolean=true){
     return
   }
 
-  var preferredFunctionNames="fghklmnopqrstuv"
+
   if((msg.includes("=") && !msg.includes("==")) || msg.includes("x")){ //define variable or function
     if(!msg.includes("=")){
-      for(var i=0; i<preferredFunctionNames.length; i++){
-        if(!graphs[preferredFunctionNames[i]])break
-      }
-      var displayName=preferredFunctionNames[i]
-      if(!displayName){
-        for(var i=1; i<100; i++)
-          if(!graphs["f_"+i]){
-            displayName="f_"+i
-            break
-          }
-      }
+      displayName=getDisplayName()
       msg=displayName+"(x)="+msg
     }
     msg=msg.replace(/(\d+)(pi|e)/gi, '($1*$2)');
     var s=msg.split("=")
-    if(["sqrt","sin","cos","pi","e","i"].includes(s[0])){
+    if(["sqrt","sin","cos","pi","e","i","roots","extremum","int"].includes(s[0])){
         print("Error: illegal override: "+s[0]+"#red",msg,printLog)
       return
     }
     if(s[0].includes("(")){ //defining a FUNCTION
+      
       var argsString=s[0].split("(")[1]
       argsString=argsString.substring(0,clampedIndex(argsString,")",0))
       var args=argsString.replace(" ","").split(/[;,]/)
       var displayName=s[0].split("(")[0]
-      var funcString=lookupVariables(s[1].replaceAll("^","**"))
-
-      if(funcString.includes("if")){
-        var conditions=funcString.split("if")
-        if(msgNoWhitespace.includes("<x<")){
-
-          var lessthan=conditions[1].split("<")
-          if(lessthan.length==3){
-            conditions[1]=lessthan[0]+"<"+lessthan[1]+" && "+lessthan[1]+"<"+lessthan[2]
-          }
-        }
-        funcString="{if("+conditions[1]+"){return "+ conditions[0]+"}return NaN}"
-      }
+      var funcString=cleanupFuncString(s[1])
 
       deleteInLog("g"+displayName)
       print(mathString(s[0])+"<br><strong>:</strong>= "+mathString(s[1]),msg,printLog,"g"+displayName)
@@ -261,6 +392,43 @@ function inputReceived(msg:string,printLog:boolean=true){
   print(msg,msg,printLog)
   GraphViewRender(canvas,ctx!)
 }
+function getDisplayName(){
+  var preferredFunctionNames="fghklmnopqrstuv"
+
+  for(var i=0; i<preferredFunctionNames.length; i++){
+    if(!graphs[preferredFunctionNames[i]])break
+  }
+  var displayName=preferredFunctionNames[i]
+  if(!displayName){
+    for(var i=1; i<100; i++)
+      if(!graphs["f_"+i]){
+        displayName="f_"+i
+        break
+      }
+  }
+  return displayName
+}
+function cleanupFuncString(msg:string){
+  var funcString=lookupVariables(msg.replaceAll("^","**"))//.replaceAll(")(",")*(")
+      
+  const pattern = /([0-9)])\(/g;
+  const replacement = "$1*(";
+
+  funcString= funcString.replace(pattern, replacement);
+
+  if(funcString.includes("if")){
+    var conditions=funcString.split("if")
+    if(msg.replaceAll(" ","").includes("<x<")){
+
+      var lessthan=conditions[1].split("<")
+      if(lessthan.length==3){
+        conditions[1]=lessthan[0]+"<"+lessthan[1]+" && "+lessthan[1]+"<"+lessthan[2]
+      }
+    }
+    funcString="{if("+conditions[1]+"){return "+ conditions[0]+"}return NaN}"
+  }
+  return funcString
+}
 function log(n:number){ return Math.log10(n)
 }
 function ln(n:number){return Math.log(n)
@@ -269,15 +437,8 @@ function lg(n:number,base:number){return Math.log(n)/Math.log(base)
 }
 function nCk(n:number,k:number){fac(n)/(fac(n-k)*fac(k))
 }
-let floor=(x:number)=>Math.floor(x)
-let ceil=(x:number)=>Math.ceil(x)
-let sign=(x:number)=>Math.sign(x)
-let tan=(x:number)=>Math.tan(x)
-let tanh=(x:number)=>Math.tanh(x)
-let atan=(x:number)=>Math.atan(x)
-let atanh=(x:number)=>Math.atanh(x)
 function fac(n:number){
-  n=floor(n)
+  n=Math.floor(n)
   if(n<=0) return 1
   for(var i=n-1; i>0; i--) n*=i
   return n
@@ -288,7 +449,7 @@ function clampedIndex(msg:string,q:string,pos:number=0){
   return pos
 }
 function myEvalFunc(msg:string):any{
-  msg=lookupVariables(msg).replaceAll("^","**")
+  msg=lookupVariables(msg).replaceAll("^","**").replaceAll(")(",")*(")
   msg=msg.replace(";",",").split("#")[0] // ignore styling 
   function parseSyntax(sqrt:string,mathsqrt:string){
     var i=0
@@ -308,21 +469,40 @@ function myEvalFunc(msg:string):any{
     }
   }
   parseSyntax("sqrt","Math.sqrt") ; parseSyntax("sin","Math.sin") ; parseSyntax("cos","Math.cos") ; parseSyntax("fac","fac") 
-  var parIn=msg.split("(").length
-  var parOut=msg.split(")").length
+  msg=balanceParentheses(msg)
   try{
-    if(parIn>parOut)
-      for(;parOut<parIn; parOut++) msg+=")"
-    else if(parIn<parOut)
-      for(;parIn<parOut; parIn++) msg="("+msg
     return Math.round(eval(msg)*10000000)/10000000
   }catch{return "undefined"}
+}
+function balanceParentheses(msg:string){
+  var parIn=msg.split("(").length
+  var parOut=msg.split(")").length
+  if(parIn>parOut)
+    for(;parOut<parIn; parOut++) msg+=")"
+  else if(parIn<parOut)
+    for(;parIn<parOut; parIn++) msg="("+msg
+    
+  parIn=msg.split("[").length
+  parOut=msg.split("]").length
+  if(parIn>parOut)
+    for(;parOut<parIn; parOut++) msg+="]"
+  else if(parIn<parOut)
+    for(;parIn<parOut; parIn++) msg="["+msg
+  return msg
 }
 
 function lookupVariables(msg:string){
   msg=lookupFunctions(msg)
-  for(const v in synonyms)
-    msg=msg.replaceAll(v,synonyms[v])
+  var synIdx=0
+  for(const v in synonyms){
+    msg=msg.replaceAll(v,"§"+synIdx)
+    synIdx++
+  }
+  synIdx=0
+  for(const v in synonyms){
+    msg=msg.replaceAll("§"+synIdx,synonyms[v])
+    synIdx++
+  }
   var sorted = Object.keys(variables).sort((a, b) => b.length - a.length)
   for(const v in sorted)
     msg=msg.replaceAll(sorted[v],"§§['"+sorted[v]+"']")
@@ -375,7 +555,10 @@ function mathString(msg:string){
 }
 
 // write to the log
-function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sliderValue:number=NaN,sliderFunction:Function=(value:string)=>0){
+function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sliderValue:number=NaN,sliderFunction:Function=()=>0,executable:any=false){
+  if(msg.length>70 && !executable){ // don't truncate code snippets >:(
+    msg=msg.substring(0,30)+" ... "+msg.substring(msg.length-30)
+  }
   var details=msg.split("#") // get styling
   if(msg.startsWith("## "))
     msg="<h3>"+details[2].substring(1)+"</h3>"
@@ -383,14 +566,39 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
     msg="<h2>"+details[1].substring(1)+"</h2>"
   else msg=details[0]
 
+
   if(!logBox) return // angy >:(
 
   if(appendLog){
+    function createSlider(q:any){
+      var slider=document.createElement("input")
+      slider.type="range"
+      slider.min="-5"
+      slider.max="5"
+      slider.step="0.05"
+      slider.value=sliderValue.toString()
+      slider.oninput=(e)=>{
+        q.children[0].innerHTML=msg.substring(0,msg.lastIndexOf("="))+"= "+slider.value
+        sliderFunction(slider.value)
+        GraphViewRender(canvas,ctx!)
+      }
+      q.append(slider)
+    }
     if(selectedLogIdx>=0){ // update selected item
       var q1=logBox!.children[selectedLogIdx]
-      q1.children[0].innerHTML=msg
-      if(sliderValue || sliderValue==0)
-        (q1.children[1] as HTMLInputElement)!.value=sliderValue.toString()
+      if(sliderValue || sliderValue==0){
+        if(q1.children[1] as HTMLInputElement)
+          (q1.children[1] as HTMLInputElement).value=sliderValue.toString()
+        else createSlider(q1) // create new slider if not exists
+        q1.children[0].innerHTML=msg
+      }else{
+        if(executable){ // code snippets have a button
+          q1.innerHTML="<button><img src='icons/execute.png'></button><p>"+msg+"</p>"
+          q1.children[0].addEventListener("click",(e)=>executable())
+        }
+        else
+        q1.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
+      }
       q1.setAttribute("value",msgOriginal)
       q1.setAttribute("color","")
       if(name.length>0) q1.setAttribute("name",name)
@@ -417,20 +625,13 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
         logBox.children[selectedLogIdx].classList.add("selected")
         consoleInput!.focus()
       })
-      if(sliderValue || sliderValue==0){
-        var slider=document.createElement("input")
-        slider.type="range"
-        slider.min="-5"
-        slider.max="5"
-        slider.step="0.05"
-        slider.value=sliderValue.toString()
-        slider.oninput=(e)=>{
-          q.children[0].innerHTML=msg.substring(0,msg.lastIndexOf("="))+"= "+slider.value
-          sliderFunction(slider.value)
-          GraphViewRender(canvas,ctx!)
+      if(sliderValue || sliderValue==0)
+        createSlider(q)
+      else{
+        if(executable){ // code snippets have a button
+          q.innerHTML="<button><img src='icons/execute.png'></button><p>"+msg+"</p>"
+          q.children[0].addEventListener("click",(e)=>executable())
         }
-        q.append(slider)
-
       }
     }
   }else
@@ -449,6 +650,9 @@ function deleteInLog(name:string){
   else if(name[0]=="p" && points[name.substring(1)]){
     delete points[name.substring(1)]
   }
+  else if(name[0]=="M" && matrices[name.substring(1)]){
+    delete matrices[name.substring(1)]
+  }
   GraphViewRender(canvas,ctx!)
 }
 
@@ -460,7 +664,7 @@ var placeholders=[
   "cos3e",
   "exp(10",
   "fac(5",
-  // but these dont work:
+  "a=2",
   "roots(f)",
   "extremums(f)",
   "normal(x;mu,sigma)",

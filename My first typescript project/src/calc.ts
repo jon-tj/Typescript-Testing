@@ -584,28 +584,22 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
       }
       q.append(slider)
     }
+    function createCodeSnippet(q:any){
+      var pid=generateCustomID(msg)
+      q.innerHTML="<button><img src='icons/execute.png'></button><p id="+pid+">"+msg+"</p>"
+      q.children[0].addEventListener("click",(e:any)=>{
+        var output=executable()
+        GraphViewRender(canvas,ctx!)
+        if(output || output==false || output==0)
+        document.getElementById(pid)!.innerHTML=msgBeforeExecution+output.toString().replaceAll(/,(\d+)/g,", $1")
+      })
+    }
     if(selectedLogIdx>=0){ // update selected item
       var q1=logBox!.children[selectedLogIdx]
-      if(sliderValue || sliderValue==0){
-        if(q1.children[1] as HTMLInputElement)
-          (q1.children[1] as HTMLInputElement).value=sliderValue.toString()
-        else createSlider(q1) // create new slider if not exists
-        q1.children[0].innerHTML=msg
-      }else{
-        if(executable){ // code snippets have a button
-          var pid=generateCustomID(msg)
-          q1.innerHTML="<button><img src='icons/execute.png'></button><p id="+pid+">"+msg+"</p>"
-          q1.children[0].addEventListener("click",(e)=>{
-            var output=executable()
-            GraphViewRender(canvas,ctx!)
-            console.log(pid)
-            if(output || output==false || output==0)
-            document.getElementById(pid)!.innerHTML=msgBeforeExecution+output.toString().replaceAll(/,(\d+)/g,", $1")
-          })
-        }
-        else
-        q1.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
-      }
+      q1.innerHTML="<p>"+msg+"</p>"
+      if(sliderValue || sliderValue==0) createSlider(q1)
+        if(executable) createCodeSnippet(q1)
+      
       q1.setAttribute("value",msgOriginal)
       q1.setAttribute("color","")
       if(name.length>0) q1.setAttribute("name",name)
@@ -635,18 +629,8 @@ function print(msg:string,msgOriginal:string,appendLog:boolean,name:string="",sl
       if(sliderValue || sliderValue==0)
         createSlider(q)
       else{
-        if(executable){ // code snippets have a button
-          var pid=generateCustomID(msg)
-          q.innerHTML="<button><img src='icons/execute.png'></button><p id="+pid+">"+msg+"</p>"
-          q.children[0].addEventListener("click",(e)=>{
-            var output=executable()
-            GraphViewRender(canvas,ctx!)
-            console.log(pid)
-            if(output || output==false || output==0)
-            document.getElementById(pid)!.innerHTML=msgBeforeExecution+output.toString().replaceAll(/,(\d+)/g,", $1")
-          })
-        }else
-        q.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
+        if(executable) createCodeSnippet(q)
+        else q.innerHTML="<p>"+msg+"</p>" // destroy slider if exists
       }
     }
   }else

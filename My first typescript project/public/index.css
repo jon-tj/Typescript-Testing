@@ -32,6 +32,7 @@ canvas{
   position: absolute;
   top:0;
   right:0;
+  outline: none; /* Occurs when the user presses the shift key */
 }
 #console-form>input{
   width:calc(100% - 1.1em);
@@ -131,4 +132,7 @@ li>button{ /*Buttons in log box*/
 }
 li>button:hover{
   background-color:rgb(206, 119, 119);
+}
+li>button:active{
+  background-color:rgb(224, 183, 183);
 }

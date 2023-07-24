@@ -1,104 +1,12 @@
 
 /// <reference path="calc.ts"/> 
 
-// Types
-type Point={x:number, y:number,update:any}|null
-type Vector={x:number, y:number,x0:number,y0:number,update:any}|null
-
-class Matrix{
-  cells:number[][]
-  rows:number
-  columns:number
-  update:Function
-
-  constructor(cells:number[][],rows:number,columns:number=1,update:any=false){
-    this.cells=cells // [[a,b],[c,d]]
-    this.rows=rows
-    this.columns=columns
-    this.update=update
-  }
-  get(row:number,column:number=0){
-    return this.cells[row][column]
-  }
-  set(value:number,row:number,column:number=0){
-    this.cells[row][column]=value
-  }
-  iter(f:Function){
-    for(var i=0; i<this.rows; i++)
-      for(var j=0; j<this.columns; j++)
-        this.set(f(i,j),i,j)
-  }
-  max(){
-    var maxVal=this.cells[0][0]
-    for(var i=0; i<this.rows; i++)
-      for(var j=0; j<this.columns; j++)
-        maxVal=Math.max(maxVal,this.get(i,j))
-    return maxVal
-  }
-  min(){
-    var minVal=this.cells[0][0]
-    for(var i=0; i<this.rows; i++)
-      for(var j=0; j<this.columns; j++)
-      minVal=Math.min(minVal,this.get(i,j))
-    return minVal
-  }
-  column(j:number=0){
-    var res=[]
-    for(var i=0; i<this.rows; i++) res.push(this.get(i,j))
-    return res
-  }
-  row(i:number=0){
-    var res=[]
-    for(var j=0; j<this.columns; j++) res.push(this.get(i,j))
-    return res
-  }
-  rownorm(){
-    for(var i=0; i<this.rows; i++){
-      var row=this.row(i)
-      var mean=0
-      for(var j=0; j<row.length; j++) mean+=row[j]
-      mean/=row.length
-      var std=0
-      for(var j=0; j<this.columns; j++) std+=(this.get(i,j)-mean)**2
-      std=Math.sqrt(std/row.length)
-      for(var j=0; j<this.columns; j++) this.set((this.get(i,j)-mean)/std,i,j)
-    }
-  }
-  colnorm(){
-    for(var i=0; i<this.columns; i++){
-      var column=this.column(i)
-      var mean=0
-      for(var j=0; j<column.length; j++) mean+=column[j]
-      mean/=column.length
-      var std=0
-      for(var j=0; j<this.rows; j++) std+=(this.get(j,i)-mean)**2
-      std=Math.sqrt(std/column.length)
-      for(var j=0; j<this.rows; j++) this.set((this.get(j,i)-mean)/std,j,i)
-    }
-  }
-  transpose(){
-    var res=[]
-    for(var j=0; j<this.rows; j++){
-      var row=[]
-      for(var i=0; i<this.columns; i++){
-        row.push(this.get(i,j))
-      }
-      res.push(row)
-    }
-    this.cells=res
-    var temp=this.columns
-    this.columns=this.rows
-    this.rows=temp
-
-  }
-  mulVec(v:number[]){
-    return this.mul(new Matrix([v],v.length)) // cast to column vector
-  }
-  mul(m:Matrix){
-    throw("Not implemented yet")
-  }
+// <3
+function remap(x:number,min1:number,max1:number,min2:number,max2:number):number{
+  return (x-min1)/(max1-min1)*(max2-min2)+min2
 }
 
+// Defining the viewport
 class Viewport{
   x=0; y=0; w=0; h=0;
   constructor(){
@@ -107,38 +15,36 @@ class Viewport{
     this.h=8
     this.w=this.h*window.innerWidth/window.innerHeight
   }
-  remap(x:number,min1:number,max1:number,min2:number,max2:number):number{
-    return (x-min1)/(max1-min1)*(max2-min2)+min2
+  transformRect(r:Rect){
+    return new Rect(this.transformX(r.x),this.transformY(r.y),r.w*this.dx,-r.h*this.dy)
   }
-  transformPoint(x:number=0,y:number=0):Point{
-    return { x:this.transformX(x),y:this.transformY(y),update:false }
-  }
-  dx(){
-    return canvas.width/this.w*0.5
-  }
-  dy(){
-    return canvas.height/this.h*0.5
-  }
+
+  get dx(){ return canvas.width/this.w*0.5 } // can be confusing so here you go :)
+  get dy(){ return canvas.height/this.h*0.5 }
+
   transformX(x:number=0):number{
-    return this.remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
+    return remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
   }
   transformY(y:number=0):number{
-    return this.remap(y,this.y-this.h,this.y+this.h,canvas.height,0)
+    return remap(y,this.y-this.h,this.y+this.h,canvas.height,0)
+  }
+  revertRect(r:Rect){
+    return new Rect(this.revertX(r.x),this.revertY(r.y),r.w/this.dx,-r.h/this.dy)
   }
   revertX(x:number=0):number{
-    return this.remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
+    return remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
   }
   revertY(y:number=0):number{
-    return this.remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
+    return remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
   }
-  pan(offset:Point):void{
-    this.x+=offset!.x*(2*this.w)/canvas.width
-    this.y-=offset!.y*(2*this.h)/canvas.height
+  pan(dx:number,dy:number):void{
+    this.x+=dx/this.dx
+    this.y-=dy/this.dy
   }
   zoom(offset:number):void{
     // mx,my are used to zoom in at the cursor
-    var mx=this.revertX(mousePos.x)
-    var my=this.revertY(mousePos.y)
+    var mx=this.revertX(mouse.x)
+    var my=this.revertY(mouse.y)
     if(offset<0){
       var dx=(mx-this.x)*(1-1/1.1)
       this.x+=dx
@@ -156,18 +62,26 @@ class Viewport{
     }
   }
 }
-
-// Declare rendering objects
 const canvas=document.querySelector<HTMLCanvasElement>("#canvas")!; // saves me some headache
-const ctx=canvas.getContext("2d");
+const ctx=canvas.getContext("2d")!;
 const view=new Viewport()
-let mousePos={x:0,y:0,update:false }
-let graphs={} as {[key:string]:Function|null}
-let points={} as {[key:string]:Point}
-let matrices={} as {[key:string]:Matrix}
-let vectors={'_temporary_':{x:0,y:0,x0:0,y0:0,update:false }} as {[key:string]:Vector}
-let mouseMomentum={x:0,y:0,update:false }
-let mouseButton=0
+
+// Setting up the environment variables
+const mouse={
+  x:0,y:0,
+  momentumX:0,momentumY:0,
+  button:0,
+  moved:0,
+  selectionRect:{x:0,y:0,w:0,h:0} as Rect,
+  displaySelectionRect:false
+}
+const renderables:Renderable[]=[]
+let legendY=0
+let legendX=0
+const keys={"Shift":false,"Control":false} as {[key:string]:boolean}
+let tempRenderable:Renderable|null=null
+var selection:any[]=[]
+var selectedHtmlNode:HTMLElement|null=null
 const graphColors=[
   "#222", // Default Gray
   "#3498db", // Bright Blue
@@ -182,60 +96,225 @@ const graphColors=[
   "#d35400"  // Pumpkin Orange
 ]
 const alphabet="abcdefghijklmnopqrstuvwxyz"
+const preferredFunctionNames="fghklmnopqrstuv" // omitting certain symbols, like 'i'
 
-// Setup rendering
-if(!ctx || !canvas) console.log("Error getting canvas")
-else{
-  GraphViewRender(canvas,ctx)
-  canvas.addEventListener("dblclick",(e)=>{
-    var abcIdx=0
-    for(; abcIdx<alphabet.length; abcIdx++)
-      if(!points[alphabet[abcIdx]])break
-    var x=Math.round(view.revertX(e.x)*10000)/10000
-    var y=Math.round(view.revertY(e.y)*10000)/10000
-    points[alphabet[abcIdx]]={x:x,y:y,update:false }
-    print(alphabet[abcIdx]+"=("+x+", "+y+")",alphabet[abcIdx]+"=("+x+", "+y+")",true,"p"+alphabet[abcIdx])
-    GraphViewRender(canvas,ctx)
-  })
-  canvas.addEventListener("mousemove",(e)=>{
-    var newMousePos={x:e.x,y:e.y,update:false }
-    var mouseMoveDelta=PointOffset(mousePos,newMousePos)
-    mouseButton=e.buttons
-    if(e.buttons==1){
-      view.pan(mouseMoveDelta)
-      GraphViewRender(canvas,ctx)
-      mouseMomentum.x=mouseMoveDelta!.x*0.2+mouseMomentum.x*0.8
-      mouseMomentum.y=mouseMoveDelta!.y*0.2+mouseMomentum.y*0.8
+// Important functions
+function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,override:boolean=true){
+  if(override && objects==null){
+    for(const r of selection)
+      if(r.htmlNode) r.htmlNode.classList.remove("selected")
+      else if(r instanceof HTMLElement) r.classList.remove("selected")
+    selection.length=0
+    consoleInput.value=""
+    outputField.innerHTML=""
+    selectedHtmlNode=null
+    Render()
+    return
+  }
+  if(Array.isArray(objects)){
+    for(const o of objects) selection.push(o)
+    if(objects.length==0){
+      consoleInput.value=""
+      outputField.innerHTML=""
+    }else if(objects.length==1){
+      if(objects[objects.length-1].htmlNode && objects[objects.length-1].htmlNode!.hasAttribute("value"))
+      consoleInput.value=objects[objects.length-1].htmlNode!.getAttribute("value")!
+      consoleInput.focus()
     }
-    mousePos=newMousePos
-  })
-  canvas.addEventListener('wheel',(e)=>{
-    view.zoom(e.deltaY)
-    GraphViewRender(canvas,ctx)
-    return false; 
-}, false);
+  }else{
+    selection.push(objects)
+    if(objects instanceof Renderable){
+      if(objects.htmlNode && objects.htmlNode.hasAttribute("value"))
+        consoleInput.value=objects.htmlNode.getAttribute("value")!
+    }else{
+      if(objects!.hasAttribute("value"))
+        consoleInput.value=objects!.getAttribute("value")!
+        objects!.classList.add("selected")
+    }
+    consoleInput.focus()
+    outputField.innerHTML=""
+  }
+  for(const r of selection)
+    if(r.htmlNode) r.htmlNode.classList.add("selected")
+  if(selection.length>0){
+    if(selection[selection.length-1] instanceof HTMLElement)
+      selectedHtmlNode=selection[selection.length-1]
+    else selectedHtmlNode=selection[selection.length-1].htmlNode
+  }else selectedHtmlNode=null
+  Render()
 }
-setInterval(()=>{
-  if(Math.abs(mouseMomentum.x)+Math.abs(mouseMomentum.x)<0.0001)return
-  GraphViewRender(canvas,ctx!)
-  if(mouseButton!=1) view.pan(mouseMomentum)
-  mouseMomentum.x*=0.9
-  mouseMomentum.y*=0.9
+function getRenderable(name:string):Renderable|null{
+  for(var i in renderables)
+    if(renderables[i].name==name) return renderables[i]
+  return null
+}
+function addRenderable(ro:Renderable):boolean{
+  for(var i in renderables)
+    if(renderables[i].name==ro.name){
+      renderables[i]=ro
+      return true
+    }
+  renderables.push(ro)
+  return false
+}
+function sortRenderableObjects(){
+  const renderableOrder = ['Matrix', 'Distribution','Graph', 'Vector', 'Point'];
+  function customRenderableSort(a: Renderable, b: Renderable): number {
+      const typeA = a.constructor.name;
+      const typeB = b.constructor.name;
+      return renderableOrder.indexOf(typeA) - renderableOrder.indexOf(typeB);
+  }
+  renderables.sort(customRenderableSort);
+}
+
+// Setting up listeners
+document.addEventListener("keydown",(e)=>{
+  if(Object.keys(keys).includes(e.key)) keys[e.key]=true
+  if(e.key=="Delete"){
+    if(selection.length==0) return
+    for(const i in selection)
+      if(selection[i] instanceof Renderable)
+        selection[i].Delete()
+      else{
+        var ro=getRenderable(selection[i].getAttribute("name"))
+        if(ro) ro.Delete()
+        else selection[i].remove()
+      }
+    setSelection()
+    return
+  }
+  if(!keys.Control && !keys.Shift)
+    consoleInput.focus() // input is probably meant for the console
+})
+canvas.addEventListener("keyup",(e)=>{
+  if(Object.keys(keys).includes(e.key)) keys[e.key]=false
+})
+canvas.addEventListener("contextmenu",(e)=>e.preventDefault()) // no right click menu on canvas
+canvas.addEventListener("mouseup",(e)=>{
+  e.preventDefault()
+  mouse.button=e.button
+  
+  if(mouse.moved<10)
+  {
+    if(mouse.displaySelectionRect) // select rectangle
+    {
+      var selRect=view.revertRect(mouse.selectionRect).bounds
+      console.log(selRect)
+      var inSelection=[]
+      for(const r in renderables){
+        if(selection.includes(renderables[r])) continue
+        if(selRect.Intersects(renderables[r].bounds))
+        inSelection.push(renderables[r])
+      }
+      setSelection(inSelection)
+      mouse.displaySelectionRect=false
+      e.preventDefault()
+    }
+    else if(mouse.button==0) // select closest object
+    {
+      var x=view.revertX(e.x)
+      var y=view.revertY(e.y)
+
+      var Dist=(x1:number,y1:number,x2:number,y2:number)=>(x1-x2)**2+(y1-y2)**2
+      var minDist=200/view.dx**2 // do not select something if its super far away
+
+      if(!keys.Shift) setSelection() // deselects all
+      for(var r in renderables){
+        var dist=0
+        if(renderables[r] instanceof Vector2)
+          dist=Dist(x,y,(renderables[r] as Vector2).x2,(renderables[r] as Vector2).y2)
+        else dist=Dist(x,y,renderables[r].x,renderables[r].y)
+        if(dist<minDist){
+          minDist=dist
+          setSelection(renderables[r],!keys.Shift)
+        }
+      }
+    }
+  }
+  
+  mouse.displaySelectionRect=false
+  Render()
+})
+
+canvas.addEventListener("dblclick",(e)=>{ // create new point
+  var abcIdx=0
+  for(; abcIdx<alphabet.length; abcIdx++)
+    if(getRenderable(alphabet[abcIdx])==null)break
+  
+  var x=Math.round(view.revertX(e.x)*10000)/10000
+  var y=Math.round(view.revertY(e.y)*10000)/10000
+  var htmlNode=appendLog(alphabet[abcIdx]+"=("+x+", "+y+")",null,"",alphabet[abcIdx])
+  var newPoint=new Point(alphabet[abcIdx],htmlNode,x,y,graphColors[abcIdx%graphColors.length])
+  renderables.push(newPoint)
+  setSelection(newPoint)
+})
+
+canvas.addEventListener("mousemove",(e)=>{
+  var mouseMoveX=mouse.x-e.x
+  var mouseMoveY=mouse.y-e.y
+  //mouse.button=e.buttons
+  
+  if(mouse.button==1) // panning the viewport
+  { 
+    canvas.style.cursor="grab"
+    mouse.moved+=mouseMoveX**2+mouseMoveY**2
+    // note that sum=0.9, since we the panning is called faster when the
+    // viewport is drifting than when the user is dragging around.
+    here:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
+    here:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
+    view.pan(mouseMoveX,mouseMoveY)
+    Render()
+  }
+  else
+  {
+    canvas.style.cursor="default"
+    mouse.moved=0
+  }
+
+  if(e.buttons==2){
+    mouse.selectionRect.w=e.x-mouse.selectionRect.x
+    mouse.selectionRect.h=e.y-mouse.selectionRect.y
+    Render()
+  }
+  mouse.x=e.x ; mouse.y=e.y
+})
+
+canvas.addEventListener("mousedown",(e)=>{
+  mouse.button=e.buttons
+  if(mouse.button==2){
+    mouse.selectionRect=new Rect(e.x,e.y,0,0)
+    mouse.displaySelectionRect=true
+  }
+})
+
+canvas.addEventListener('wheel',(e)=>{ // Zooming
+  view.zoom(e.deltaY)
+  Render()
+  return false; // prevents scrolling on the website
+}, false);
+
+setInterval(()=>{ // Camera momentum
+  if(Math.abs(mouse.momentumX)+Math.abs(mouse.momentumY)<0.00001)return
+  if(mouse.button!=1) view.pan(mouse.momentumX,mouse.momentumY)
+  mouse.momentumX*=0.95
+  mouse.momentumY*=0.95
+  Render()
 },0.1)
 
-// Draw graphs on the canvas
-function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,includeTemporary:boolean=false){
+
+// The juice
+function Render(){
   clearCanvas()
   ctx.font="16px Arial"
-
-  // TODO: Axes overlap >:(
 
   function Round2(x:number){
     if(Math.abs(x)<1) return x.toFixed(2);
     return x.toString()
   }
 
+  //#region Render grid
   // X-axis
+  ctx.lineWidth=1
   ctx.fillStyle="#777"
   ctx.strokeStyle="#bbb"
   ctx.beginPath()
@@ -275,144 +354,37 @@ function GraphViewRender(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D,
     var stringWidth=ctx.measureText(yString).width
     ctx.fillText(yString,xT-10-stringWidth+(drawNumbersOnRightSide?+20+stringWidth:0),yT+5)
   })
+  //#endregion
 
-  // Matrices
-  graphIdx=0
-  for(var m in matrices){
-    if(!matrices[m])continue
-    if(matrices[m]!.update)matrices[m]!.update()
-
-    if(m=="_temporary_"){
-      if(!includeTemporary) continue
-      ctx.strokeStyle="#acc"
-      graphIdx--
-    }
-    ctx.fillText(m,view.transformX(0),view.transformY(0))
-    ctx.fillStyle="white"
-    var x0=view.transformX(0)
-    var y0=view.transformY(0)
-    ctx.fillRect(x0,y0,view.transformX(matrices[m].columns)-x0-1,view.transformY(-matrices[m].rows)-y0-1)
-    ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-    ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
-
-    var min=matrices[m].min()
-    var max=matrices[m].max()
-    var dx=view.dx()
-    var dy=view.dy()
-    for(var i=0; i<matrices[m].rows; i++){
-      for(var j=0; j<matrices[m].columns; j++){
-        
-        ctx.fillStyle="hsl("+view.remap(matrices[m].get(i,j),min,max,230,0)+", 80%, 50%)"
-        ctx.fillRect(view.transformX(j)-1,view.transformY(-i)-1,dx,dy)
-        if(view.h>8)continue
-        ctx.fillStyle=graphColors[0]
-        ctx.fillText(matrices[m].get(i,j).toString(),view.transformX(j+0.5)-5,view.transformY(-i-0.5)+5)
-      }
-    }
-    graphIdx++
-  }
-
-  // Graphs
-  var graphIdx=0
-  var textY=25
-  var textX=Math.max(45,calcWindow.clientWidth+10)
+  legendY=25
+  legendX=Math.max(45,calcWindow.clientWidth+10)
   if(calcWindow.clientWidth<15){
-    textY=240
-    textX=14
+    legendY=240
+    legendX=14
   }
-  for(var g in graphs){
-    if(!graphs[g])continue
-    if(g=="_temporary_"){
-      if(includeTemporary){
-        ctx.strokeStyle="#acc"
-      }
-      else continue
-    }else{
-      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-      ctx.fillText(g+"(x)",textX,textY)
-      textY+=25
-      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
-      graphIdx++
-    }
-    var pointOnGraph=view.transformPoint(view.x,graphs[g]!(view.x))!
-    ctx.moveTo(pointOnGraph!.x,pointOnGraph!.y)
-    ctx.beginPath()
-    var inc=view.w*0.0004
-    for(var x=view.x-view.w; x<view.x+view.w+inc; x+=inc){ //+1 inc to render even when partially off-cam
-      pointOnGraph=view.transformPoint(x,graphs[g]!(x))!
-      
-      var render:boolean=(pointOnGraph.y<canvas.height && pointOnGraph.y>0)
-      if(render)ctx.lineTo(pointOnGraph.x,pointOnGraph.y)
-      // overshoot a little so lines coming onto the screen have the correct direction
-      else ctx.moveTo(pointOnGraph.x,clamp(pointOnGraph.y,-100,canvas.height+100)) 
-    }
+  if(tempRenderable){
+    if(tempRenderable.update) tempRenderable.update!()
+    tempRenderable.Render(true)
+  }
+  for(const i in renderables)
+  {
+    if(renderables[i].update) renderables[i].update!()
+    renderables[i].Render()
+  }
     
-    ctx.stroke()
-  }
 
-  // Vectors
-  graphIdx=0
-  for(var v in vectors){
-    if(!vectors[v])continue
-    if(vectors[v]!.update)vectors[v]!.update()
-    var endX=view.transformX(vectors[v]!.x)
-    var endY=view.transformY(vectors[v]!.y)
-    var startX=view.transformX(vectors[v]!.x0)
-    var startY=view.transformY(vectors[v]!.y0)
-    var offsetY=Math.sign(endY-startY)*12+5
-    if(v=="_temporary_"){
-      if(!includeTemporary) continue
-      ctx.strokeStyle="#acc"
-      graphIdx--
-    }else{
-      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
-      ctx.fillText(v,endX,endY+offsetY)
-    }
-    ctx.beginPath()
-    ctx.moveTo(startX,startY)
-    ctx.lineTo(endX,endY)
-    var magnitude=Math.sqrt((vectors[v]!.x-vectors[v]!.x0)**2+(vectors[v]!.y-vectors[v]!.y0)**2)
-    var normX=(vectors[v]!.x-vectors[v]!.x0)/magnitude
-    var normY=(vectors[v]!.y-vectors[v]!.y0)/magnitude
-    var arrowHeadSize=Math.min(magnitude*0.1,0.2)
-    ctx.lineTo(view.transformX(vectors[v]!.x+(normY-normX)*arrowHeadSize),view.transformY(vectors[v]!.y-(normX+normY)*arrowHeadSize))
-    ctx.moveTo(endX,endY)
-    ctx.lineTo(view.transformX(vectors[v]!.x-(normY+normX)*arrowHeadSize),view.transformY(vectors[v]!.y+(normX-normY)*arrowHeadSize))
-    ctx.stroke()
-    graphIdx++
-  }
-  
-  // Points
-  graphIdx=0
-  for(var p in points){
-    if(!points[p])continue
-    if(points[p]!.update)points[p]!.update()
-    var x=view.transformX(points[p]!.x)
-    var y=view.transformY(points[p]!.y)
-    if(p=="_temporary_"){
-      if(!includeTemporary) continue
-      ctx.strokeStyle="#acc"
-      graphIdx--
-    }else{
-      ctx.fillStyle=graphColors[graphIdx%graphColors.length]
-      ctx.strokeStyle=graphColors[graphIdx%graphColors.length]
-      ctx.fillText(p,x+8,y+5)
-    }
-    ctx.fillStyle = graphColors[graphIdx%graphColors.length];
-    ctx.beginPath();
-    ctx.arc(x,y, 6, 0, 2 * Math.PI);
-    ctx.fill();
-    graphIdx++
+  if(mouse.displaySelectionRect){
+    ctx.fillStyle="rgba(255, 0, 0, 0.3)"
+    ctx.fillRect( mouse.selectionRect.x,
+                  mouse.selectionRect.y,
+                  mouse.selectionRect.w,
+                  mouse.selectionRect.h)
   }
   
   
 }
 
 // Helper functions
-function PointOffset(a:Point,b:Point):Point{
-  return {x:a!.x-b!.x,y:a!.y-b!.y,update:false }
-}
 function clearCanvas(){
   ctx!.fillStyle="white"
   ctx!.fillRect(0,0,canvas!.width,canvas!.height)
@@ -452,3 +424,5 @@ function getAxisNotches(from:number,to:number,notchDistance:number){
     if(x!=0)notches.push(x)
   return notches
 }
+
+Render() // render first time :)

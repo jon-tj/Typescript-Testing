@@ -19,10 +19,8 @@ function emptyLog(){
     while (logBox!.firstChild) {
         logBox!.removeChild(logBox!.firstChild);
     }
-    graphs={}
-    variables={'e':Math.E,'pi':Math.PI} as VariableLookup
-    points={}
-    GraphViewRender(canvas,ctx!)
+    renderables.length=0 // removes all renderables
+    Render()
 }
 function downloadFile(){
 

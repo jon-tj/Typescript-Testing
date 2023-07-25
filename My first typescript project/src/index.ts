@@ -385,10 +385,10 @@ function Render(){
   })
   //#endregion
 
-  legendY=25
+  legendY=0
   legendX=Math.max(45,calcWindow.clientWidth+10)
   if(calcWindow.clientWidth<15){
-    legendY=240
+    legendY=220
     legendX=14
   }
   if(tempRenderable){

@@ -26,9 +26,16 @@ function downloadFile(){
 
 }
 function toggleSettings(){
+  var open=false
+  if(calcWindow.clientWidth<100){ // make sure the calc window is opened and wide enough
+    if(lastCalcWindowWidth<100) lastCalcWindowWidth=100
+    calcWindow.style.width=lastCalcWindowWidth+"px"
+    open=true
+  }
+
   var adv= document.querySelector<HTMLElement>("#advanced-settings-container")!
   var advInner= document.querySelector<HTMLElement>("#advanced-settings")!
-  if(adv.clientHeight<30){
+  if(adv.clientHeight<30 || open){ // if we opened the calc window to view the settings
     adv.style.height=advInner.clientHeight+"px"
   }
   else{

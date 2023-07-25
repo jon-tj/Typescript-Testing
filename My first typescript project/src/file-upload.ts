@@ -7,10 +7,12 @@ function doupload() {
       reader.onload = function(event) {
         if(event.target && event.target.readyState==2){
             let content = event.target!.result as string
-            var df = DataFrame.FromCSV(content,fileInput.files![0].name.split('.')[0])
+            var name=fileInput.files![0].name.split('.')[0]
+            name=name.replaceAll("(","").replaceAll(")","").replaceAll(" ","")
+            var df = DataFrame.FromCSV(content,name)
             addRenderable(df)
-            eval(df.name+"=df")
-            df.htmlNode=appendLog(df.name,"dataframe ("+df.dataPrimitiveType+")","(cannot edit dataframe directly)",df.name)
+            eval(name+"=df")
+            df.htmlNode=appendLog(name,"dataframe ("+df.dataPrimitiveType+")","(cannot edit dataframe directly)",name)
             Render()
         }
       }
@@ -21,6 +23,7 @@ function doupload() {
 class DataFrame extends Renderable{
     //TIP: use df.toString to check contents ;)
     cells:any[][]
+    maxVal:number
     primaryRow:string[] ; primaryColumn:string[]
     dataPrimitiveType:string
     constructor(name:string,htmlNode:HTMLElement|null,cells:string[][],primaryRowIdx:number=0,primaryColumnIdx:number=0){
@@ -28,23 +31,24 @@ class DataFrame extends Renderable{
         this.cells=cells
         this.primaryRow=this.row(primaryRowIdx)
         this.primaryColumn=this.column(primaryColumnIdx)
-
+        this.maxVal=0
         // try to determine source of data, for optimal rendering
         const headers=this.row(primaryRowIdx)
         if(headers.includes("Close") && headers.includes("Date"))
-            this.dataPrimitiveType="yfinance"
+            this.dataPrimitiveType="yf"
         else if(headers[0]=='') // a fun quirk ssb has
             this.dataPrimitiveType="ssb"
         else
             this.dataPrimitiveType="unknown"
 
         // clean up the data and prepare viewport
-        if(this.dataPrimitiveType=="yfinance"){
+        if(this.dataPrimitiveType=="yf"){
             const timeCol=this.column(0)
             var closeCol=this.column(4)
             const development=[]
+            const K=1/ (1000 * 3600 * 24)// from seconds to days since epoch
             for(var i=0; i<timeCol.length; i++){
-                timeCol[i]=Date.parse(timeCol[i])*0.001 // in seconds since epoch
+                timeCol[i]=Date.parse(timeCol[i])*K
                 if(i==0) development.push(0)
                 else development.push(closeCol[i]/closeCol[i-1]-1)
             }
@@ -54,17 +58,7 @@ class DataFrame extends Renderable{
             closeCol=this.column(4)
             this.removeColumn(0)
             this.numeric()
-            view=new ViewportNonlinear(
-                (x:number)=>{
-                    return x*361/31190400
-                },
-                (y:number)=>{
-                    return y
-                },
-                (x:number)=>{
-                    return x/361*31190400
-                },
-            )
+            this.maxVal=Math.max(... this.column(5))
             view.w=100
             var max=Math.max(...closeCol.slice(-view.w))
             var min=Math.min(...closeCol.slice(-view.w))
@@ -127,17 +121,26 @@ class DataFrame extends Renderable{
     }
     Render(){
         switch(this.dataPrimitiveType){
-            case 'yfinance': // draws a candlestick graph
-            ctx.fillStyle=this.color
-            ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
+            case 'yf': // draws a candlestick graph
+                ctx.fillStyle=this.color
+                ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
+                const y0=Math.min(view.transformY(),canvas.height-23)
+                const volMul=Math.min(view.dy*10,canvas.height)/this.maxVal
+                var i=0
                 for(const row of this.cells){
-                    var x1=view.transformX((row[6]-this.cells[this.cells.length-1][6]),false,-1)
-                    var x2=view.transformX((row[6]-this.cells[this.cells.length-1][6]),false)
+                    var days=++i-this.cells.length
+                    //var days=row[6]-this.cells[this.cells.length-1][6]
+                    var x1=view.transformX((days-1))
+                    var x2=view.transformX((days))
                     var open=view.transformY(row[0])
                     var high=view.transformY(row[1])
                     var low=view.transformY(row[2])
                     var close=view.transformY(row[3])
-                    var volume=view.transformY(row[5])
+                    var volume=row[5]
+                    if(this.isSelected){
+                        ctx.fillStyle= tempColor
+                        ctx.fillRect(x1,y0,view.dx,-volume*volMul)
+                    }
                     var development=row[7]
                     ctx.fillStyle= development>0?"green":"red"
                     ctx.fillRect((x1+x2)/2,low,1,high-low)
@@ -149,5 +152,8 @@ class DataFrame extends Renderable{
             default:
                 throw 'cry about it'
         }
+    }
+    get bounds(): Rect {
+        return new Rect(Infinity,Infinity,-1,-1)
     }
 }

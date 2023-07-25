@@ -288,10 +288,10 @@ canvas.addEventListener("mousemove",(e)=>{
     }else{
       canvas.style.cursor="grab"
       mouse.moved+=mouseMoveX**2+mouseMoveY**2
-      // note that sum=0.9, since we the panning is called faster when the
+      // note: sum=0.9, since we the panning is called faster when the
       // viewport is drifting than when the user is dragging around.
-      here:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
-      here:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
+      note:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
+      note:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
       view.pan(mouseMoveX,mouseMoveY)
     }
     Render()

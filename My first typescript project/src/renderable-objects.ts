@@ -104,7 +104,7 @@ class Vector2 extends Renderable{
     Render(temp:boolean=false){
         if(super.update) super.update()
 
-        var r= view.transformRect(this.bounds)
+        var r= view.transformRect(this.boundsSigned)
         ctx.fillStyle = this.color
         ctx.strokeStyle = this.color
 

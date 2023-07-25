@@ -4,6 +4,7 @@
 // Preferences
 const abc="abcdefghijklmnopqrstuvw" // names for everything else
 const fgh="fghklmnopqrstuv" // function names
+const distNames="DEFGHIJKL"
 
 // Select HTML objects
 const logBox=document.querySelector<HTMLUListElement>("#log-box")!
@@ -173,7 +174,7 @@ function inputReceived(msg:string,submit:boolean=true){
         }
         else{
           outMsg=msg
-          outAns=evalOutput as string
+          outAns=evalOutput.toString()
         }
       }
     }
@@ -366,19 +367,22 @@ function setLogProps(htmlNode:HTMLElement, sliderValue:number|null=null,isExecut
       }
     }
   }else if(slider) slider.remove()
+
   var btnExecute=htmlNode.querySelector("button")
   if(isExecutable){
     var q=htmlNode.querySelector("p.q")!
     var pid=uniqueId(q.innerHTML)
-    var btn=document.createElement("button")
-    btn.innerHTML="<img src='icons/execute.png'>"
-    htmlNode.insertBefore(btn,htmlNode.children[0])
-    btn.onclick=(e)=>{
+    if(!btnExecute){
+      btnExecute=document.createElement("button")
+      btnExecute.innerHTML="<img src='icons/execute.png'>"
+      htmlNode.insertBefore(btnExecute,htmlNode.children[0])
+    }
+    btnExecute.onclick=(e)=>{
       eval(q.innerHTML)
       e.preventDefault()
       e.stopPropagation()
     }
-  }
+  }else if(btnExecute) btnExecute.remove()
   console.log()
 }
 

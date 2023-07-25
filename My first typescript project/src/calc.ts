@@ -137,6 +137,7 @@ function inputReceived(msg:string,submit:boolean=true){
       
     }
     else if(rightHandReduced.startsWith("[")){ // defining a vector
+      console.log("a")
       var args=rightHand.split(/[,;]/)
       var name=submit?firstFreeName(abc):"temp"
       outRO=new Vector2(name,null,0,0,0,0,"#000",()=>{
@@ -378,16 +379,16 @@ function setLogProps(htmlNode:HTMLElement, sliderValue:number|null=null,isExecut
   console.log()
 }
 
-function uniqueId(msg:string) {
+function uniqueId(msg:string) :number{
   let hash = 0;
   if (msg.length === 0) 
-    return hash.toString()
+    return hash
   for (let i = 0; i < msg.length; i++) {
     const char = msg.charCodeAt(i)
     hash = (hash << 5) - hash + char
     hash &= hash // Convert to 32-bit integer
   }
-  return hash.toString();
+  return hash;
 }
 
 //#region random placeholder in console input field

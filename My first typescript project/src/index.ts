@@ -101,7 +101,8 @@ const mouse={
   button:0,
   moved:0,
   selectionRect:{x:0,y:0,w:0,h:0} as Rect,
-  displaySelectionRect:false
+  displaySelectionRect:false,
+  clickTime:Date.now()
 }
 const renderables:Renderable[]=[]
 let legendY=0
@@ -123,8 +124,6 @@ const graphColors=[
   "#2980b9", // Dark Blue
   "#d35400"  // Pumpkin Orange
 ]
-const alphabet="abcdefghijklmnopqrstuvwxyz"
-const preferredFunctionNames="fghklmnopqrstuv" // omitting certain symbols, like 'i'
 
 // Important functions
 function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,override:boolean=true){
@@ -219,6 +218,13 @@ canvas.addEventListener("keyup",(e)=>{
 })
 canvas.addEventListener("contextmenu",(e)=>e.preventDefault()) // no right click menu on canvas
 canvas.addEventListener("mouseup",(e)=>{
+  if(defineVectorOrPoint && tempRenderable){
+    tempRenderable.htmlNode=appendLog(tempRenderable.name+"="+tempRenderable.toString(),null,"",tempRenderable.name)
+    addRenderable(tempRenderable)
+    setSelection(tempRenderable)
+    defineVectorOrPoint=false
+    tempRenderable=null
+  }
   e.preventDefault()
   mouse.button=e.button
   
@@ -264,33 +270,30 @@ canvas.addEventListener("mouseup",(e)=>{
   Render()
 })
 
-canvas.addEventListener("dblclick",(e)=>{ // create new point
-  var abcIdx=0
-  for(; abcIdx<alphabet.length; abcIdx++)
-    if(getRenderable(alphabet[abcIdx])==null)break
-  
-  var x=Math.round(view.revertX(e.x)*10000)/10000
-  var y=Math.round(view.revertY(e.y)*10000)/10000
-  var htmlNode=appendLog(alphabet[abcIdx]+"=("+x+", "+y+")",null,"",alphabet[abcIdx])
-  var newPoint=new Point(alphabet[abcIdx],htmlNode,x,y,graphColors[abcIdx%graphColors.length])
-  renderables.push(newPoint)
-  setSelection(newPoint)
-})
-
 canvas.addEventListener("mousemove",(e)=>{
   var mouseMoveX=mouse.x-e.x
   var mouseMoveY=mouse.y-e.y
   //mouse.button=e.buttons
   
-  if(mouse.button==1) // panning the viewport
+  if(mouse.button==1) // panning the viewport or drawing
   { 
-    canvas.style.cursor="grab"
-    mouse.moved+=mouseMoveX**2+mouseMoveY**2
-    // note that sum=0.9, since we the panning is called faster when the
-    // viewport is drifting than when the user is dragging around.
-    here:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
-    here:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
-    view.pan(mouseMoveX,mouseMoveY)
+    if(defineVectorOrPoint){
+      var name=firstFreeName(abc)
+      var x=Math.round(view.revertX(e.x)*10000)/10000
+      var y=Math.round(view.revertY(e.y)*10000)/10000
+      var x0=Math.round(view.revertX(mouse.selectionRect.x)*10000)/10000
+      var y0=Math.round(view.revertY(mouse.selectionRect.y)*10000)/10000
+      tempRenderable=new Vector2(name,null,x0,y0,x-x0,y-y0,graphColors[renderables.length%graphColors.length])
+      outputField.innerHTML=name+"="+tempRenderable.toString()
+    }else{
+      canvas.style.cursor="grab"
+      mouse.moved+=mouseMoveX**2+mouseMoveY**2
+      // note that sum=0.9, since we the panning is called faster when the
+      // viewport is drifting than when the user is dragging around.
+      here:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
+      here:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
+      view.pan(mouseMoveX,mouseMoveY)
+    }
     Render()
   }
   else
@@ -307,10 +310,22 @@ canvas.addEventListener("mousemove",(e)=>{
   mouse.x=e.x ; mouse.y=e.y
 })
 
+var defineVectorOrPoint=false
 canvas.addEventListener("mousedown",(e)=>{
+  console.log(Date.now()-mouse.clickTime)
+  if((Date.now()-mouse.clickTime)<200){
+    defineVectorOrPoint=true
+    var name=firstFreeName(abc)
+    var x=Math.round(view.revertX(e.x)*10000)/10000
+    var y=Math.round(view.revertY(e.y)*10000)/10000
+    tempRenderable=new Point(name,null,x,y,graphColors[renderables.length%graphColors.length])
+    outputField.innerHTML=name+"="+tempRenderable.toString()
+  }
+  mouse.clickTime=Date.now()
+
   mouse.button=e.buttons
+  mouse.selectionRect=new Rect(e.x,e.y,0,0)
   if(mouse.button==2){
-    mouse.selectionRect=new Rect(e.x,e.y,0,0)
     mouse.displaySelectionRect=true
   }
 })

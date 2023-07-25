@@ -29,6 +29,7 @@ class Rect{
 }
 
 class Renderable{
+    toString():string{return typeof(this).toString()}
     name:string; x:number; y:number; color: string; angle:number; update:Function|null; display:boolean; htmlNode:HTMLElement|null
     constructor(name:string,htmlNode:HTMLElement|null, x:number=0,y:number=0, color:string|null=null, update:Function|null=null){
         this.name=name
@@ -62,6 +63,7 @@ class Renderable{
     }
 }
 class Point extends Renderable{
+    toString(): string { return "("+this.x+", "+this.y+")"}
     constructor(name:string,htmlNode:HTMLElement|null, x: number, y: number, color:string|null=null, update:Function|null=null) {
         super(name,htmlNode,x, y,color,update);
     }
@@ -87,6 +89,7 @@ class Point extends Renderable{
     }
 }
 class Vector2 extends Renderable{
+    toString(): string { return "("+this.w+", "+this.h+")"}
     w:number; h:number
     constructor(name:string,htmlNode:HTMLElement|null, x2: number, y2: number,x1:number=0,y1:number=0, color:string|null=null, update:Function|null=null) {
         super(name,htmlNode,x2, y2,color,update);

@@ -278,6 +278,7 @@ canvas.addEventListener("mousemove",(e)=>{
   if(mouse.button==1) // panning the viewport or drawing
   { 
     if(defineVectorOrPoint){
+      canvas.style.cursor="pointer"
       var name=firstFreeName(abc)
       var x=Math.round(view.revertX(e.x)*10000)/10000
       var y=Math.round(view.revertY(e.y)*10000)/10000

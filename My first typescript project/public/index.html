@@ -27,8 +27,9 @@
           </button>
           <button onclick="downloadFile()"><img src="icons/save.png" id="save-button">
           </button>
-          <button onclick="uploadFile()"><img src="icons/upload.png" id="upload-button">
-          </button>
+          <label for="file-upload"><button onclick="uploadFile()"><img src="icons/upload.png" id="upload-button">
+          </button></label>
+          <input type="file" id="file-upload" name="file-upload" onchange="doupload()">
           <button onclick="toggleSettings()"><img src="icons/settings.png" id="settings-button">
           </button>
         </section>
@@ -57,6 +58,7 @@
         <script src="/dist/index.js"></script>
         <script src="/dist/navbar.js"></script>
         <script src="/dist/rootFinder.js"></script>
+        <script src="/dist/file-upload.js"></script>
       </aside>
     </div>
     

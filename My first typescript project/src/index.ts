@@ -19,22 +19,22 @@ class Viewport{
     return new Rect(this.transformX(r.x),this.transformY(r.y),r.w*this.dx,-r.h*this.dy)
   }
 
-  get dx(){ return canvas.width/this.w*0.5 } // can be confusing so here you go :)
+  get dx(){ return canvas.width/this.w*0.5 } // can be confusing so here you go ;)
   get dy(){ return canvas.height/this.h*0.5 }
 
-  transformX(x:number=0):number{
+  transformX(x:number=0,linear:boolean=true,linearOffset:number=0):number{
     return remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
   }
-  transformY(y:number=0):number{
+  transformY(y:number=0,linear:boolean=true,linearOffset:number=0):number{
     return remap(y,this.y-this.h,this.y+this.h,canvas.height,0)
   }
   revertRect(r:Rect){
     return new Rect(this.revertX(r.x),this.revertY(r.y),r.w/this.dx,-r.h/this.dy)
   }
-  revertX(x:number=0):number{
+  revertX(x:number=0,linear:boolean=true):number{
     return remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
   }
-  revertY(y:number=0):number{
+  revertY(y:number=0,linear:boolean=true):number{
     return remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
   }
   pan(dx:number,dy:number):void{
@@ -43,8 +43,8 @@ class Viewport{
   }
   zoom(offset:number):void{
     // mx,my are used to zoom in at the cursor
-    var mx=this.revertX(mouse.x)
-    var my=this.revertY(mouse.y)
+    var mx=this.revertX(mouse.x,true)
+    var my=this.revertY(mouse.y,true)
     if(offset<0){
       var dx=(mx-this.x)*(1-1/1.1)
       this.x+=dx
@@ -62,9 +62,37 @@ class Viewport{
     }
   }
 }
+class ViewportNonlinear extends Viewport{
+  funcX:Function ; funcY:Function ; inverseX:Function ; inverseY:Function
+  constructor(
+  funcX:Function=(x:number)=>Math.log(x),
+  funcY:Function=(y:number)=>y,
+  inverseX:Function=(x:number)=>Math.pow(10,x),
+  inverseY:Function=(y:number)=>y){
+    super()
+    this.funcX=funcX
+    this.funcY=funcY
+    this.inverseX=inverseX
+    this.inverseY=inverseY
+  }
+  transformX(x:number=0,linear:boolean=false,linearOffset:number=0):number{
+    return remap(linear?x:this.funcX(x)+linearOffset,this.x-this.w,this.x+this.w,0,canvas.width)
+  }
+  transformY(y:number=0,linear:boolean=false):number{
+    return remap(linear?y:this.funcY(y),this.y-this.h,this.y+this.h,canvas.height,0)
+  }
+  revertX(x:number=0,linear:boolean=false):number{
+    x=remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
+    return linear?x:this.inverseX(x)
+  }
+  revertY(y:number=0,linear:boolean=false):number{
+    y=remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
+    return linear?y:this.inverseY(y)
+  }
+}
 const canvas=document.querySelector<HTMLCanvasElement>("#canvas")!; // saves me some headache
 const ctx=canvas.getContext("2d")!;
-const view=new Viewport()
+var view=new Viewport()
 
 // Setting up the environment variables
 const mouse={
@@ -341,6 +369,7 @@ function Render(){
   var drawNumbersOnRightSide=xT<100+calcWindow.clientWidth
   ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
   ctx.stroke()
+  notchInterval=getNotchInterval(view.y-view.h,view.y+view.h,20)
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
     ctx.beginPath()
     yT=view.transformY(y)

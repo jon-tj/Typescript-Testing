@@ -126,7 +126,10 @@ function inputReceived(msg:string,submit:boolean=true){
       const graphFunc=evalOutput
       if(isValidEvalString(displayName+"(2)"))
         outRO=new Graph(displayName,null,graphFunc as Function)
-      else outMsg="Undefined: "+leftHand+" = "+rightHand
+      else{
+        outMsg="Undefined: "+leftHand+" = "+rightHand
+        outAns=null
+      }
     }
   }
   else{

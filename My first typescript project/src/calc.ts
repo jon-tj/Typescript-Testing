@@ -4,6 +4,7 @@
 // Preferences
 const abc="abcdefghijklmnopqrstuvw" // names for everything else
 const fgh="fghklmnopqrstuv" // function names
+const mno="MNOPQRSTUVW" // matrix names
 
 // Select HTML objects
 const logBox=document.querySelector<HTMLUListElement>("#log-box")!
@@ -69,6 +70,10 @@ if(consoleInput) consoleInput.addEventListener("keyup",(e)=>{
 
 // welcome to hell
 function inputReceived(msg:string,submit:boolean=true){
+  
+  // remove ghost figure from previous input
+  tempRenderable=null
+  
   msg=msg.replaceAll("alert","console.log")
   if(msg.length==0){
     if(submit){ // delete selected log if exists
@@ -83,8 +88,6 @@ function inputReceived(msg:string,submit:boolean=true){
     return
   }
 
-  // remove ghost figure from previous input
-  tempRenderable=null
 
   // output is stored in these values
   var outRO:Renderable|null=null
@@ -98,7 +101,7 @@ function inputReceived(msg:string,submit:boolean=true){
   var inputEqSides=msg.split("=")
   var leftHand=inputEqSides.length>1?inputEqSides[0]:null
   var rightHand=inputEqSides[inputEqSides.length-1]
-  const rightHandReduced=rightHand.replaceAll(" ","")
+  const rightHandReduced=balanceParentheses(rightHand.replaceAll(" ",""))
 
   //#region we must figure out what we're trying to define
   if(msg.startsWith("/")){ // intended as a script
@@ -125,46 +128,110 @@ function inputReceived(msg:string,submit:boolean=true){
     }
   }
   else{
+    if(rightHandReduced.startsWith("[[")){ // defining a matrix
+      var name=leftHand?leftHand:firstFreeName(mno)
 
-    if(!leftHand) leftHand=firstFreeName(abc) // beyond this point we use ABC names :)
+      var funcString=rightHandReduced.substring(2,rightHandReduced.indexOf("]"))
+      var args1=funcString.split(/[;,]/)
+      if(args1.length==1 && rightHandReduced.endsWith(")")){ // iterative notation, [[i+j]](2,2) --> [[0,1],[2,3]] etc
+        var lengthString=rightHandReduced.substring(rightHandReduced.indexOf("(")+1).replace(")","").split(/[,;]/)
+        funcString=cleanupFuncString(funcString)
+        
+        var nrows=parseInt(lengthString[0])
+        var ncols=parseInt(lengthString[lengthString.length-1])
+        eval(name+"=outRO")
+        if(isValidEvalString("tempFunc=(i,j)=>"+funcString) && !isNaN(nrows) && !isNaN(ncols)){
 
-    else if(rightHandReduced.startsWith("[[")){ // defining a matrix
-      
-    }
-    else if(rightHandReduced.startsWith("[")){ // defining a vector
-      var args=rightHand.split(/[,;]/)
-      var name=submit?firstFreeName(abc):"temp"
-      outRO=new Vector2(name,null,0,0,0,0,"#000",()=>{
-        if(args.length<2)return
-        (outRO as Vector2).w=evalMath(args[0]) as number
-        (outRO as Vector2).h=evalMath(args[1]) as number
-      })
-      eval(name+"=outRO")
-      outMsg=leftHand
-      outAns=rightHand
-    }
-    if(rightHandReduced.startsWith("(") && msg.match(/[;,]/)){ // defining a point
-      var args=rightHand.split(/[,;]/)
-      outRO=new Point(submit?firstFreeName(abc):"temp",null,0,0,"#000",()=>{
-        outRO!.x=evalMath(args[0]) as number
-        outRO!.y=evalMath(args[1]) as number
-      })
-      outMsg=leftHand
-      outAns=rightHand
-    }
-    else{ // defining a variable or just doing arithmetic
-      
-      if(isValidEvalString(msg) && evalOutput && !evalOutput.toString().startsWith("function") && !evalOutput.toString().startsWith("(x)=>")){
-        msg=beautifyMathString(msg)
-        if(msg.includes("=")){
-          var s=msg.split("=")
-          outMsg=s[0]
-          outAns=s[1]
-          sliderValue=evalMath(outAns) as number
+          rightHand="["
+          for(var i=0; i<nrows; i++){
+            var row="["+eval("tempFunc("+i+",0)")
+            for(var j=1; j<ncols; j++){
+              row+=", "+eval("tempFunc("+i+","+j+")")
+            }
+            rightHand+=row+"], "
+          }
+          rightHand=rightHand.substring(0,rightHand.length-2)+"]"
         }
-        else{
-          outMsg=msg
-          outAns=evalOutput as string
+        var body:number[][]|null=isValidEvalString(rightHand)?evalOutput as number[][]:null
+        if(body) outRO=new Matrix(name,null,body,nrows,ncols)
+      }else{    // standard notation, ie [[1,2],[3,4]]
+        var args=rightHand.split(/[,;]/)
+        var body:number[][]|null=isValidEvalString(rightHand)?evalOutput as number[][]:null
+        if(body){
+          var isValidMatrix=true
+          for(const row of body)
+            if(row.length!=body[0].length){
+              isValidMatrix=false
+              break
+            }
+          if(isValidMatrix){
+            var nrows=body.length
+            var ncols=nrows>0?body[0].length:0
+            outRO=new Matrix(name,null,body,nrows,ncols)
+            eval(name+"=outRO")
+          }
+        }
+      }
+      outMsg=name
+      outAns=rightHand
+    }else{
+
+      if(!leftHand) leftHand=firstFreeName(abc) // beyond this point we use ABC names :)
+      if(rightHandReduced.startsWith("[")){ // defining a vector
+        var name=submit?firstFreeName(abc):"temp"
+        var args1=rightHandReduced.substring(1).replace("]","").split(/[;,]/)
+        if(args1.length==1 && rightHandReduced.endsWith(")")){ // iterative notation, [i+1](4) --> [1,2,3,4] etc
+          var length=parseInt(rightHandReduced.substring(rightHandReduced.indexOf("(")+1).replace(")",""))
+          var funcString=cleanupFuncString(rightHandReduced.substring(1,rightHandReduced.indexOf("]")))
+          if(isValidEvalString("tempFunc=(i)=>"+funcString) && !isNaN(length)){
+
+            rightHand="["+eval("tempFunc(0)")
+            for(var i=1; i<length; i++)
+              rightHand+=", "+eval("tempFunc("+i+")")
+            rightHand+="]"
+          }
+          args1=rightHand.substring(1).replace("]","").split(/[;,]/)
+          
+          outRO=new Vector2(name,null,0,0,0,0,"#000")
+          eval(name+"=outRO")
+          outMsg=leftHand
+          outAns=rightHand
+
+        }else{
+          var args=rightHand.split(/[,;]/)
+          outRO=new Vector2(name,null,0,0,0,0,"#000",()=>{
+            if(args.length<2)return
+            (outRO as Vector2).w=evalMath(args[0]) as number
+            (outRO as Vector2).h=evalMath(args[1]) as number
+          })
+          eval(name+"=outRO")
+          outMsg=leftHand
+          outAns=rightHand
+        }
+      }
+      if(rightHandReduced.startsWith("(") && msg.match(/[;,]/)){ // defining a point
+        var args=rightHand.split(/[,;]/)
+        outRO=new Point(submit?firstFreeName(abc):"temp",null,0,0,"#000",()=>{
+          outRO!.x=evalMath(args[0]) as number
+          outRO!.y=evalMath(args[1]) as number
+        })
+        outMsg=leftHand
+        outAns=rightHand
+      }
+      else{ // defining a variable or just doing arithmetic
+        
+        if(isValidEvalString(msg) && evalOutput && !evalOutput.toString().startsWith("function") && !evalOutput.toString().startsWith("(x)=>")){
+          msg=beautifyMathString(msg)
+          if(msg.includes("=")){
+            var s=msg.split("=")
+            outMsg=s[0]
+            outAns=s[1]
+            sliderValue=evalMath(outAns) as number
+          }
+          else{
+            outMsg=msg
+            outAns=evalOutput as string
+          }
         }
       }
     }
@@ -179,6 +246,7 @@ function inputReceived(msg:string,submit:boolean=true){
       htmlNode=selectedHtmlNode
     }
     else htmlNode=appendLog(outMsg,outAns,originalMsgInput,"",sliderValue,isExecutable)
+    outputField.innerHTML=""
   }
   else outputField.innerHTML=outAns?"="+outAns:outMsg
 
@@ -254,7 +322,7 @@ function prepareStringForEval(msg:string){
   parseSyntax("sqrt","Math.sqrt") ; parseSyntax("sin","Math.sin") ; parseSyntax("cos","Math.cos") ; parseSyntax("fac","fac") 
   return balanceParentheses(msg)
 }
-var evalOutput:Function|string=""
+var evalOutput:Function|string|number[][]=""
 function isValidEvalString(evalString:string) {
   try {
     evalOutput=eval(prepareStringForEval(evalString));

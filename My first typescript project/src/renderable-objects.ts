@@ -128,8 +128,9 @@ class Vector2 extends Renderable{
         ctx.moveTo(r.x2,r.y2)
         ctx.lineTo(view.transformX(this.x2-(normY+normX)*arrowHeadSize),view.transformY(this.y2+(normX-normY)*arrowHeadSize))
         ctx.stroke()
-        
-        
+    }
+    cross(v:Vector2){
+        return this.w*v.h-this.h*v.w
     }
 }
 class Graph extends Renderable{
@@ -320,8 +321,92 @@ class Matrix extends Renderable{
     Render(temp:boolean=false){
         if(super.update) super.update()
 
+        if(!temp){
+            ctx.fillStyle=this.color
+            ctx.fillText(this.name,view.transformX(0),view.transformY(0))
+        }
+        ctx.fillStyle="white"
+        var x0=view.transformX(0)
+        var y0=view.transformY(0)
+        ctx.fillRect(x0,y0,view.transformX(this.columns)-x0-1,view.transformY(-this.rows)-y0-1)
+        if(this.isSelected){
+          ctx.strokeStyle="#f00"
+          ctx.lineWidth=7
+          ctx.strokeRect(x0-4,y0-4,view.transformX(this.columns)-x0+6,view.transformY(-this.rows)-y0+6)
+        }
+        
+        ctx.strokeStyle=this.color
+    
+        var min=this.min()
+        var max=this.max()
+        var dx=view.dx
+        var dy=view.dy
+        for(var i=0; i<this.rows; i++){
+          for(var j=0; j<this.columns; j++){
+            
+            ctx.fillStyle="hsl("+remap(this.get(i,j),min,max,230,0)+", 80%, 50%)"
+            ctx.fillRect(view.transformX(j)-1,view.transformY(-i)-1,dx,dy)
+            if(view.h>8)continue
+            ctx.fillStyle=graphColors[0]
+            ctx.fillText(this.get(i,j).toString(),view.transformX(j+0.5)-5,view.transformY(-i-0.5)+5)
+          }
+        }
     }
     get bounds():Rect{
-        return new Rect(this.x,this.y,this.columns,this.rows)
+        return new Rect(this.x,this.y,this.columns,-this.rows).bounds
+    }
+}
+
+class Vector extends Renderable{
+    cells:number[]
+
+    constructor(name:string,htmlNode:HTMLElement|null, cells:number[], update:Function|null=null){
+        super(name,htmlNode,0,0)
+        this.cells=cells
+        super.update=update
+    }
+    get(i:number){
+        return this.cells[i]
+    }
+    set(value:number,i:number){
+        this.cells[i]=value
+    }
+    iter(f:Function){
+        for(var i=0; i<this.length; i++)
+            this.set(f(i),i)
+    }
+    get length(){return this.cells.length}
+    max(){ return Math.max(...this.cells)
+    }
+    min(){ return Math.min(...this.cells)
+    }
+    norm(){
+        var mean=0
+        for(var j=0; j<this.cells.length; j++) mean+=this.cells[j]
+        mean/=this.cells.length
+        var std=0
+        for(var j=0; j<this.length; j++) std+=(this.get(j)-mean)**2
+        std=Math.sqrt(std/this.length)
+        for(var j=0; j<this.length; j++) this.set((this.get(j)-mean)/std,j)
+    }
+    transpose(){
+        return new Matrix(this.name+"^T",this.htmlNode,[this.cells],1,this.length)
+    }
+    dot(v:Vector){
+        var sum=0
+        for(var i=0; i<this.length; i++)
+            sum+=this.get(i)*v.get(i)
+        return sum
+    }
+    Render(temp:boolean=false){
+        if(super.update) super.update()
+
+        if(!temp){
+            ctx.fillStyle=this.color
+            ctx.fillText(this.name,view.transformX(0),view.transformY(0))
+        }
+        ctx.fillStyle="white"
+        var x0=view.transformX(0)
+        var y0=view.transformY(0)
     }
 }

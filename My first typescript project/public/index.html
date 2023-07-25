@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Web site created using create-snowpack-app" />
     <link rel="stylesheet" type="text/css" href="/index.css" />
+    <link rel="stylesheet" id="theme-link" type="text/css" href="/theme-night.css" />
     
     <title>Jon's Calculator</title>
   </head>
@@ -14,33 +15,39 @@
     <div id="window-container">
       <aside id="calc-window">
         <section id="navbar" class="navbar">
-          <button 
+          <button title="Toggle fullscreen"
           onmouseenter="document.getElementById('fullscreen-button').src='icons/fullscreen_extended.png';"
           onmouseleave="document.getElementById('fullscreen-button').src='icons/fullscreen.png'"
           onclick="toggleFullscreen()">
           <img src="icons/fullscreen.png" id="fullscreen-button">
           </button>
-          <button onmouseenter="var b=document.getElementById('trash-button');b.src='icons/trash_open.png';b.style.transform='rotate(-15deg)';"
+          <button title="Clear workspace" onmouseenter="var b=document.getElementById('trash-button');b.src='icons/trash_open.png';b.style.transform='rotate(-15deg)';"
           onmouseleave="var b=document.getElementById('trash-button');b.src='icons/trash_closed.png';b.style.transform='rotate(0)';"
           onclick="emptyLog()">
           <img src="icons/trash_closed.png" id="trash-button">
           </button>
-          <button onclick="downloadFile()"><img src="icons/save.png" id="save-button">
+          <button title="Save" onclick="downloadFile()"><img src="icons/save.png" id="save-button">
           </button>
-        <button><label for="file-upload"><img src="icons/upload.png" id="upload-button">
+          <button title="Upload file"><label for="file-upload"><img src="icons/upload.png" id="upload-button">
           </label></button>
-          <button onclick="toggleSettings()"><img src="icons/settings.png" id="settings-button">
+          <button title="More settings" onclick="toggleSettings()"><img src="icons/settings.png" id="settings-button">
           </button>
           
-          <input type="file" id="file-upload" name="file-upload" onchange="doupload()">
+          <input title="" type="file" id="file-upload" name="file-upload" onchange="doupload()">
           
         </section>
         <section id="advanced-settings-container">
           <section id="advanced-settings" class="navbar">
     
-            <button  id="reset-button" onclick="reset()"><img src="icons/reset.png">
+            <button id="reset-button" onclick="reset()"><img src="icons/reset.png" alt="reset"> <span>Reset viewport</span>
             </button>
-            <label for="reset-button">Reset</label>
+            <button id="theme-button" onclick="toggleTheme()">
+              <section id="img-container">
+                <img src="icons/themes.png" alt="reset" id="theme-button-img">
+              </section>
+              <span>Toggle night mode</span>
+            </button>
+
           </section>
         </section>
         

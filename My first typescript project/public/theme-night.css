@@ -1,0 +1,25 @@
+:root{
+    /* canvas */
+    --canvas-bg:#1e2125;
+    --grid:#29272c;
+    --axes:#35383b;
+    --selected:#FF8F2B;
+    --selectionRect:#ff8e2b1c;
+
+    /* navbar */
+    --navbar-bg:rgb(27, 28, 37);
+    --navbar-shadow:#06153b70;
+    --navbar-primary:#b0b6ac;
+
+    /* sidebar */
+    --log-bg:#24272b;
+    --log-hover-bg:#272e3a;
+    --log-primary:#386aa0;
+    --log-selected-bg:#3D84D1;
+    --log-selected-primary:#201a1a;
+
+    --console-bg:rgb(87, 64, 64);
+    --console-primary:#dfb6b6;
+    --console-selected-bg:rgb(136, 107, 107);
+    --console-selected-primary:rgb(136, 107, 107); /* not important */
+}

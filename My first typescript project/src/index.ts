@@ -112,7 +112,7 @@ let tempRenderable:Renderable|null=null
 var selection:any[]=[]
 var selectedHtmlNode:HTMLElement|null=null
 const graphColors=[
-  "#222", // Default Gray
+  //"#222", // Default Gray
   "#3498db", // Bright Blue
   "#2ecc71", // Emerald Green
   "#f39c12", // Sunflower Yellow
@@ -197,18 +197,34 @@ function sortRenderableObjects(){
 // Setting up listeners
 document.addEventListener("keydown",(e)=>{
   if(Object.keys(keys).includes(e.key)) keys[e.key]=true
+  if(e.key=="o" && e.ctrlKey){
+    document.querySelector<HTMLInputElement>("#file-upload")!.click()
+    e.preventDefault()
+  }
+  if(e.key=="s" && e.ctrlKey){
+    downloadFile()
+    e.preventDefault()
+  }
   if(e.key=="Delete"){
-    if(selection.length==0) return
-    for(const i in selection)
-      if(selection[i] instanceof Renderable)
-        selection[i].Delete()
-      else{
-        var ro=getRenderable(selection[i].getAttribute("name"))
-        if(ro) ro.Delete()
-        else selection[i].remove()
-      }
-    setSelection()
-    return
+    if(e.shiftKey){ // delete everything
+      emptyLog()
+      consoleInput.value=""
+    }
+    else // delete selection
+    {
+      if(selection.length==0) return
+      for(const i in selection)
+        if(selection[i] instanceof Renderable)
+          selection[i].Delete()
+        else{
+          var ro=getRenderable(selection[i].getAttribute("name"))
+          if(ro) ro.Delete()
+          else selection[i].remove()
+        }
+      setSelection()
+      return
+    }
+    consoleInput.focus()
   }
   if(!keys.Control && !keys.Shift)
     consoleInput.focus() // input is probably meant for the console
@@ -255,8 +271,8 @@ canvas.addEventListener("mouseup",(e)=>{
       if(!keys.Shift) setSelection() // deselects all
       for(var r in renderables){
         var dist=0
-        if(renderables[r] instanceof Vector2)
-          dist=Dist(x,y,(renderables[r] as Vector2).x2,(renderables[r] as Vector2).y2)
+        if(renderables[r] instanceof Vector)
+          dist=Dist(x,y,(renderables[r] as Vector).x2,(renderables[r] as Vector).y2)
         else dist=Dist(x,y,renderables[r].x,renderables[r].y)
         if(dist<minDist){
           minDist=dist
@@ -284,7 +300,7 @@ canvas.addEventListener("mousemove",(e)=>{
       var y=Math.round(view.revertY(e.y)*10000)/10000
       var x0=Math.round(view.revertX(mouse.selectionRect.x)*10000)/10000
       var y0=Math.round(view.revertY(mouse.selectionRect.y)*10000)/10000
-      tempRenderable=new Vector2(name,null,x0,y0,x-x0,y-y0,graphColors[renderables.length%graphColors.length])
+      tempRenderable=new Vector(name,null,[x-x0,y-y0],null,x0,y0,graphColors[renderables.length%graphColors.length])
       outputField.innerHTML=name+"="+tempRenderable.toString()
     }else{
       canvas.style.cursor="grab"
@@ -313,7 +329,6 @@ canvas.addEventListener("mousemove",(e)=>{
 
 var defineVectorOrPoint=false
 canvas.addEventListener("mousedown",(e)=>{
-  console.log(Date.now()-mouse.clickTime)
   if((Date.now()-mouse.clickTime)<200){
     defineVectorOrPoint=true
     var name=firstFreeName(abc)
@@ -348,6 +363,12 @@ setInterval(()=>{ // Camera momentum
 
 // The juice
 function Render(){
+  style=getComputedStyle(document.documentElement)
+  colorSelection=style.getPropertyValue("--selected")
+  colorSelectionRect=style.getPropertyValue("--selectionRect")
+  colorAxes=style.getPropertyValue("--axes")
+  colorGrid=style.getPropertyValue("--grid")
+  colorClear=style.getPropertyValue("--canvas-bg")
   clearCanvas()
   ctx.font="16px Arial"
 
@@ -359,8 +380,8 @@ function Render(){
   //#region Render grid
   // X-axis
   ctx.lineWidth=1
-  ctx.fillStyle="#777"
-  ctx.strokeStyle="#bbb"
+  ctx.fillStyle=colorAxes
+  ctx.strokeStyle=colorAxes
   ctx.beginPath()
   var yT=clamp(view.transformY(),5,canvas.height-23)
   ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
@@ -369,17 +390,17 @@ function Render(){
   getAxisNotches(view.x-view.w,view.x+view.w,notchInterval).forEach((x)=>{
     ctx.beginPath()
     xT=view.transformX(x,true)
-    ctx.strokeStyle="#bbb"
+    ctx.strokeStyle=colorAxes
     ctx.moveTo(xT,yT-5) ; ctx.lineTo(xT,yT+5)
     ctx.stroke()
-    ctx.strokeStyle="#eee"
+    ctx.strokeStyle=colorGrid
     ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.height)
     if(x!=0)ctx.stroke()
     ctx.fillText(Round2(x),xT-8,yT+18)
   })
   
   // Y-axis
-  ctx.strokeStyle="#bbb"
+  ctx.strokeStyle=colorAxes
   ctx.beginPath()
   var xT=clamp(view.transformX(),Math.max(50,calcWindow.clientWidth+8),canvas.width-8) //honestly i just like these numbers, no meaning behind them
   var drawNumbersOnRightSide=xT<100+calcWindow.clientWidth
@@ -389,10 +410,10 @@ function Render(){
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
     ctx.beginPath()
     yT=view.transformY(y,true)
-    ctx.strokeStyle="#bbb"
+    ctx.strokeStyle=colorAxes
     ctx.moveTo(xT-5,yT) ; ctx.lineTo(xT+5,yT)
     ctx.stroke()
-    ctx.strokeStyle="#eee"
+    ctx.strokeStyle=colorGrid
     ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
     if(y!=0)ctx.stroke()
     var yString=Round2(y)
@@ -419,7 +440,7 @@ function Render(){
     
 
   if(mouse.displaySelectionRect){
-    ctx.fillStyle="rgba(255, 0, 0, 0.3)"
+    ctx.fillStyle=colorSelectionRect
     ctx.fillRect( mouse.selectionRect.x,
                   mouse.selectionRect.y,
                   mouse.selectionRect.w,
@@ -431,7 +452,7 @@ function Render(){
 
 // Helper functions
 function clearCanvas(){
-  ctx!.fillStyle="white"
+  ctx!.fillStyle=colorClear
   ctx!.fillRect(0,0,canvas!.width,canvas!.height)
 }
 function clamp(x:number,min:number,max:number){

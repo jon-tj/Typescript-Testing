@@ -15,7 +15,6 @@ function toggleFullscreen() {
     }
   }
 function emptyLog(){
-    
     while (logBox!.firstChild) {
         logBox!.removeChild(logBox!.firstChild);
     }
@@ -42,6 +41,8 @@ function toggleSettings(){
     adv.style.height="0px"
   }
 }
+
+// advanced settings
 function reset(){
   view=new Viewport()
   mouse.momentumX=0
@@ -50,4 +51,16 @@ function reset(){
   keys.Control=false
   setSelection()
   Render()
+}
+function toggleTheme(){
+  var img=document.querySelector<HTMLImageElement>("#theme-button-img")!
+  var theme=document.querySelector<HTMLLinkElement>("#theme-link")!
+  if(img.style.top=="0px"){
+    img.style.top="-32px"
+    theme.href="/theme-night.css"
+  }else{
+    img.style.top="0px"
+    theme.href="/theme-day.css"
+  }
+  mouse.momentumX=0.01 // hack to make the screen render ;)
 }

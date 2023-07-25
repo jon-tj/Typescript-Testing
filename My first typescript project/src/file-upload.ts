@@ -138,7 +138,7 @@ class DataFrame extends Renderable{
                     var close=view.transformY(row[3])
                     var volume=row[5]
                     if(this.isSelected){
-                        ctx.fillStyle= tempColor
+                        ctx.fillStyle= colorAxes
                         ctx.fillRect(x1,y0,view.dx,-volume*volMul)
                     }
                     var development=row[7]

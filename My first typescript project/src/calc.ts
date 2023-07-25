@@ -7,6 +7,29 @@ const fgh="fghklmnopqrstuv" // function names
 const mno="MNOPQRSTUVW" // matrix names
 const distNames="DEFGHIJKL"
 
+// Synonyms
+const synonyms={
+  "sqrt":"Math.sqrt",
+
+  "sin":"Math.sin",
+  "cos":"Math.cos",
+  "tan":"Math.tan",
+  "asin":"Math.asin",
+  "acos":"Math.acos",
+  "atan":"Math.atan",
+  "sin'":"Math.cos",
+  "cos'":"-Math.sin",
+  "sin^-1":"Math.asin",
+  "cos^-1":"Math.acos",
+  "tan^-1":"Math.atan",
+  "sinh":"Math.sinh",
+  "cosh":"Math.cosh",
+  "tanh":"Math.tanh",
+  "asinh":"Math.asinh",
+  "acosh":"Math.acosh",
+  "atanh":"Math.atanh",
+} as {[key:string]:string}
+
 // Select HTML objects
 const logBox=document.querySelector<HTMLUListElement>("#log-box")!
 const consoleForm=document.querySelector<HTMLInputElement>("#console-form")!
@@ -32,7 +55,7 @@ calcWindowDragArea.addEventListener("mousemove",(e)=>{
     calcWindowDragArea.style.left="calc(100% - 1em)"
     calcWindowDragArea.style.right="-1em"
   }
-  calcWindow.style.borderRight="3px solid orange"
+  calcWindow.classList.add("drag")
   Render()
 })
 let lastCalcWindowWidth=0
@@ -50,7 +73,7 @@ calcWindowDragArea.addEventListener("dblclick",(e)=>{
   Render()
 })
 calcWindowDragArea.addEventListener("mouseleave",(e)=>{
-    calcWindow.style.borderRight="3px solid white"
+  calcWindow.classList.remove("drag")
 })
 //#endregion
 
@@ -125,10 +148,11 @@ function inputReceived(msg:string,submit:boolean=true){
     if(msg.replaceAll(" ","").includes(displayName+"(")){ // circular definition
       outMsg="Circular definition: "+ leftHand+" = "+rightHand
     }
-    else if(isValidEvalString(displayName+"=(x)=>"+msg)){
+    else if(isValidEvalString(displayName+"=(x)=>{ return ("+msg+") }")){
       const graphFunc=evalOutput
-      if(isValidEvalString(displayName+"(2)"))
-        outRO=new Graph(displayName,null,graphFunc as Function)
+      console.log(eval(displayName))
+      if(isValidEvalString(displayName+"(0)",false))
+        outRO=new Graph(displayName,null,graphFunc as Function,graphColors[renderables.length%graphColors.length])
       else{
         outMsg="Undefined: "+leftHand+" = "+rightHand
         outAns=null
@@ -191,26 +215,25 @@ function inputReceived(msg:string,submit:boolean=true){
         if(args1.length==1 && rightHandReduced.endsWith(")")){ // iterative notation, [i+1](4) --> [1,2,3,4] etc
           var length=parseInt(rightHandReduced.substring(rightHandReduced.indexOf("(")+1).replace(")",""))
           var funcString=cleanupFuncString(rightHandReduced.substring(1,rightHandReduced.indexOf("]")))
+          var vecBody:number[]=[]
           if(isValidEvalString("tempFunc=(i)=>"+funcString) && !isNaN(length)){
 
-            rightHand="["+eval("tempFunc(0)")
-            for(var i=1; i<length; i++)
-              rightHand+=", "+eval("tempFunc("+i+")")
-            rightHand+="]"
+            for(var i=0; i<length; i++)
+              vecBody.push(eval("tempFunc("+i+")"))
+            
           }
-          args1=rightHand.substring(1).replace("]","").split(/[;,]/)
-          
-          outRO=new Vector2(name,null,0,0,0,0,"#000")
+          outRO=new Vector(name,null,vecBody)
           eval(name+"=outRO")
           outMsg=leftHand
-          outAns=rightHand
+          outAns=outRO.toString()
 
         }else{
           var args=rightHand.split(/[,;]/)
-          outRO=new Vector2(name,null,0,0,0,0,"#000",()=>{
-            if(args.length<2)return
-            (outRO as Vector2).w=evalMath(args[0]) as number
-            (outRO as Vector2).h=evalMath(args[1]) as number
+          outRO=new Vector(name,null,[0,0],()=>{
+            var body=[]
+            for(var a of args)
+              body.push(evalMath(a) as number);
+            (outRO as Vector).cells=body
           })
           eval(name+"=outRO")
           outMsg=leftHand
@@ -245,7 +268,7 @@ function inputReceived(msg:string,submit:boolean=true){
     }
   }
   //#endregion
-
+  if(outAns) outAns=outAns.toString()
   if(outAns && outAns.length>50){
     outAns=outAns.substring(0,25)+" ... "+outAns.substring(outAns.length-25)
   }
@@ -310,10 +333,8 @@ function clampedIndex(msg:string,q:string,pos:number=0){
   if(pos<0)return msg.length
   return pos
 }
-function prepareStringForEval(msg:string){
-  msg=msg.replaceAll("^","**").replaceAll(")(",")*(") //.replaceAll("&middot;","*").replaceAll("&nbsp;","")
-  msg=msg.replace(";",",").replace(/([0-9)])\(/g,  "$1*(").split("#")[0] // ignore styling 
-  function parseSyntax(sqrt:string,mathsqrt:string){
+function parseSyntax(msg:string,sqrt:string,mathsqrt:string){
+  //console.log(msg+":"+ msg.replaceAll(sqrt,mathsqrt))
     var i=0
     while(i>=0 && i<msg.length-sqrt.length){
       i=msg.indexOf(sqrt,i)
@@ -329,14 +350,21 @@ function prepareStringForEval(msg:string){
       }
       i+=mathsqrt.length
     }
+    return msg
   }
-  parseSyntax("sqrt","Math.sqrt") ; parseSyntax("sin","Math.sin") ; parseSyntax("cos","Math.cos") ; parseSyntax("fac","fac") 
+function prepareStringForEval(msg:string,applySynonyms=false){
+  msg=msg.replaceAll("^","**").replaceAll(")(",")*(") //.replaceAll("&middot;","*").replaceAll("&nbsp;","")
+  msg=msg.replace(";",",").replace(/([0-9)])\(/g,  "$1*(").split("#")[0] // ignore styling 
+  if(applySynonyms)
+  for(const q in synonyms)
+    msg=parseSyntax(msg,q,synonyms[q])
+  
   return balanceParentheses(msg)
 }
 var evalOutput:Function|string|number[][]=""
-function isValidEvalString(evalString:string) {
+function isValidEvalString(evalString:string,applySynonyms=true) {
   try {
-    evalOutput=eval(prepareStringForEval(evalString));
+    evalOutput=eval(prepareStringForEval(evalString,applySynonyms));
     return true;
   } catch (error) {return false}
 }

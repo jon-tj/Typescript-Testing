@@ -1,4 +1,3 @@
-console.log("a!!")
 function dist(obj:any,nBins:number=10){
     console.log("hey!")
     if(obj instanceof Array){

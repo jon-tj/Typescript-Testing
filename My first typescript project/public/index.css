@@ -7,19 +7,18 @@ ul{
 }
 li{
   padding: 1em;
-  border-bottom: 1px solid rgb(224, 145, 145);
+  border-bottom: 1px solid var(--log-primary);
   cursor: pointer;
   transition: background-color 0.3s;
+  color:var(--log-primary)
 }
-li:hover{
-  background-color: rgba(255, 255, 255,0.1);
-}
+li:hover{background-color: var(--log-hover-bg)}
+li.selected{background-color: var(--log-selected-bg);
+  color:var(--log-selected-primary)}
 li[color="red"]{ background-color: rgb(170,32,54); }
 li[color="green"]{ background-color: rgb(70,153,82); }
 li[color="info"]{font-style: italic;background-color: #ddd;}
-li.selected{
-  background-color: rgb(255, 215, 215);
-}
+
 h2,h3{margin: 0;}
 ul{margin: 0;}
 
@@ -37,44 +36,48 @@ canvas{
 }
 #console-form>input{
   width:calc(100% - 1.1em);
-  border: none;
-  border-bottom: 2px solid rgb(54, 54, 54);
-  background-color: rgb(206, 119, 119);
-  transition: border 0.3s,background-color 0.3s;
-  outline: none;
+  border: none; outline: none;
+  border-bottom: 3px solid transparent;
+  background-color: var(--console-bg);
+  border-radius: 4px;
   padding:0.5em;
-  color:rgb(126, 59, 59);
+  color:var(--console-primary);
+  caret-color: var(--console-primary);
+  transition: border 0.3s,background-color 0.3s;
 }
 #console-form>input:focus{
-  background-color: rgb(231, 198, 198);
-  border-bottom: 2px solid rgb(255, 145, 0);
-  caret-color: rgb(126, 59, 59);
+  background-color: var(--console-selected-bg);
+  border-bottom: 3px solid var(--selected);
 }
 #console-form{
   position: absolute;
-  bottom: 0;
+  bottom: 0; left: 1em; right: 1em;
   min-height: 6.5em;
-  left: 1em;
-  right: 1em;
   overflow-x: hidden;
 }
+#calc-window.drag{
+  border-right: 2px solid var(--selected);
+}
 #calc-window{
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 350px; min-width: 5px;
+
+  font-family: "Roboto", "Helvetica", sans-serif;
+  color:var(--log-primary);
+  background-color: var(--log-bg);
+  
   opacity: 0.85;
   transition: opacity 0.3s, border-right 0.3s;
-  border-right: 3px solid white;
-  position: absolute;
-  
-  top:0;left:0;bottom: 0;
-  background-color: rgb(126, 59, 59);
-  width: 350px;
-  min-width: 5px;
-  color:rgb(224, 145, 145);
-  font-family: "Roboto", "Helvetica", sans-serif;
+  border-right: 3px solid var(--canvas-bg);
 }
 #calc-window:hover{
   opacity: 1;
 }
 #log-box{
+  position: absolute;
+  left:0; right:0; bottom:7em; top:2.7em; /* shut >:( zip shush */
+  box-shadow: 0px 1px 10px var(--navbar-shadow) inset;
   height:calc(100% - 10em);
 }
 #calc-window-drag-area{
@@ -94,17 +97,23 @@ top:-2em;
 li>p{
   margin:0
 }
-.navbar{background-color:rgb(92, 43, 43) ; padding-left: 5px;}
+.navbar{
+  z-index: 3;
+  background-color:var(--navbar-bg);
+  padding-left: 5px;
+}
 .navbar>button{
   background-color: transparent;
   border: none;
   padding:0.3em;
   transition: background-color 0.1s;
   margin-right: -4px;
-  border-radius: 1em;
+  border-top-left-radius: 1em;
+  border-top-right-radius: 1em;
 }
+#advanced-settings>button{border-radius: 1em;}
 .navbar>button:hover{
-  background-color: rgba(214, 143, 143, 0.2);
+  background-color: var(--log-bg);
 }
 
 /* Buttons in navbar*/
@@ -131,10 +140,10 @@ li>button{ /*Buttons in log box*/
   padding-left: 8px;
 }
 li>button:hover{
-  background-color:rgb(206, 119, 119);
+  background-color:var(--console-bg)
 }
 li>button:active{
-  background-color:rgb(224, 183, 183);
+  background-color:var(--console-selected-bg)
 }
 input[type=file]{
   opacity: 0;
@@ -145,8 +154,8 @@ input[type=file]{
   transition: height 0.3s;
   height:0px;
   position: relative;
-  box-shadow: 0px 2px 5px rgb(87, 0, 0) inset;
-  background-color:rgb(92, 43, 43);
+  box-shadow: 0px 2px 5px var(--navbar-shadow) inset;
+  background-color:var(--navbar-bg);
 }
 #advanced-settings{
   background-color:transparent; 
@@ -157,8 +166,20 @@ input[type=file]{
   padding:0.5em;
   overflow: hidden;
 }
-#advanced-settings>label{
-  color:rgb(160, 160, 160);
+button>span{
+  color:var(--navbar-primary);
   position: relative;
-  top:-0.5em;
+  top:-0.7em;
+  padding-right: 1em;
+}
+#theme-button-img{
+  position: relative;
+  top:-32px; /* 0 for day, -32px for night */
+  transition: top 0.3s;
+}
+#theme-button>#img-container{
+  height:32px;
+  overflow: hidden;
+  position: relative;
+  display: inline-block;
 }

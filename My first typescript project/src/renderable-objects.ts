@@ -1,5 +1,9 @@
-const selectionOutline="red"
-const tempColor="#ccc"
+var style=getComputedStyle(document.documentElement)
+var colorSelection=style.getPropertyValue("--selected")
+var colorSelectionRect=style.getPropertyValue("--selectionRect")
+var colorAxes=style.getPropertyValue("--axes")
+var colorGrid=style.getPropertyValue("--grid")
+var colorClear=style.getPropertyValue("--canvas-bg")
 const thinLine=1
 const thickLine=3
 
@@ -72,12 +76,12 @@ class Point extends Renderable{
         var y=view.transformY(this.y)
 
         if(this.isSelected){
-            ctx.fillStyle = selectionOutline;
+            ctx.fillStyle = colorSelection;
             ctx.beginPath();
             ctx.arc(x,y, 10, 0, 2 * Math.PI);
             ctx.fill();
         }
-        if(temp) ctx.fillStyle = tempColor
+        if(temp) ctx.fillStyle = colorAxes
         else{
             ctx.fillStyle = this.color
             ctx.fillText(this.name,x+8,y+5)
@@ -85,54 +89,6 @@ class Point extends Renderable{
         ctx.beginPath();
         ctx.arc(x,y, 6, 0, 2 * Math.PI);
         ctx.fill();
-    }
-}
-class Vector2 extends Renderable{
-    toString(): string { return "("+this.w+", "+this.h+")"}
-    w:number; h:number
-    constructor(name:string,htmlNode:HTMLElement|null, x2: number, y2: number,x1:number=0,y1:number=0, color:string|null=null, update:Function|null=null) {
-        super(name,htmlNode,x2, y2,color,update);
-        this.w=x1
-        this.h=y1
-    }
-    get x2(){return this.x+this.w}
-    get y2(){return this.y+this.h}
-
-    get bounds():Rect{ return this.boundsSigned.bounds } // calling bounds makes x1 smaller than x2 etc
-    get boundsSigned():Rect{return new Rect(this.x,this.y,this.w,this.h)}
-    get magnitude(){return Math.sqrt(this.w**2+this.h**2)}
-    Render(temp:boolean=false){
-        if(super.update) super.update()
-
-        var r= view.transformRect(this.boundsSigned)
-        ctx.fillStyle = this.color
-        ctx.strokeStyle = this.color
-
-        if(this.isSelected) ctx.lineWidth=3
-        else ctx.lineWidth=1
-
-        var magnitude=this.magnitude
-        var normX=this.w/magnitude
-        var normY=this.h/magnitude
-        var arrowHeadSize=Math.min(magnitude*0.1,0.2)
-
-        if(temp) ctx.strokeStyle=tempColor
-        else{
-            var offsetY=5-Math.sign(this.h)*12
-            ctx.fillText(this.name,r.x2,r.y2+offsetY)
-            ctx.strokeStyle=this.color
-        }
-        ctx.beginPath()
-        ctx.moveTo(r.x,r.y)
-        ctx.lineTo(r.x2,r.y2)
-        ctx.lineTo(r.x2,r.y2)
-        ctx.lineTo(view.transformX(this.x2+(normY-normX)*arrowHeadSize),view.transformY(this.y2-(normX+normY)*arrowHeadSize))
-        ctx.moveTo(r.x2,r.y2)
-        ctx.lineTo(view.transformX(this.x2-(normY+normX)*arrowHeadSize),view.transformY(this.y2+(normX-normY)*arrowHeadSize))
-        ctx.stroke()
-    }
-    cross(v:Vector2){
-        return this.w*v.h-this.h*v.w
     }
 }
 class Graph extends Renderable{
@@ -164,7 +120,7 @@ class Graph extends Renderable{
         if(this.isSelected) ctx.lineWidth=3
         else ctx.lineWidth=1
         
-        if(temp) ctx.strokeStyle=tempColor
+        if(temp) ctx.strokeStyle=colorAxes
         else{
             this.Legend(this.name+"(x)")
             ctx.strokeStyle=this.color
@@ -181,11 +137,10 @@ class Matrix extends Renderable{
     columns:number
 
     constructor(name:string,htmlNode:HTMLElement|null, cells:number[][],rows:number,columns:number=1,x:number=0,y:number=0, update:Function|null=null){
-        super(name,htmlNode,x,y)
+        super(name,htmlNode,x,y,null,update)
         this.cells=cells // [[a,b],[c,d]]
         this.rows=rows
         this.columns=columns
-        super.update=update
     }
     get(row:number,column:number=0){
         return this.cells[row][column]
@@ -261,31 +216,32 @@ class Matrix extends Renderable{
         this.rows=temp
 
     }
-    mulVec(v:Vector2){
+    mulVec(v:Vector){
         var V=new Matrix("V",v.htmlNode,[],this.columns)
         if(this.rows==2)
-            V.cells=[[v.w,v.h]]
+            V.cells=[[v.get(0),v.get(1)]]
         else if(this.rows==3)
-            V.cells=[[v.w,v.h,1]]
+            V.cells=[[v.get(0),v.get(1),1]]
         else if(this.rows==4)
-            V.cells=[[v.w,v.h,v.x,v.y]]
+            V.cells=[[v.get(0),v.get(1),v.x,v.y]]
         else if(this.rows==5)
-            V.cells=[[v.w,v.h,v.x,v.y,1]]
+            V.cells=[[v.get(0),v.get(1),v.x,v.y,1]]
         else throw("Matrix sizes do not match up!")
         var u=this.mul(V)
         if(this.rows==2)
             alert("a")    
         //return new Vector()
         else if(this.rows==3)
-            V.cells=[[v.w,v.h,1]]
+            V.cells=[[v.get(0),v.get(1),1]]
         else if(this.rows==4)
-            V.cells=[[v.w,v.h,v.x,v.y]]
+            V.cells=[[v.get(0),v.get(1),v.x,v.y]]
         else if(this.rows==5)
-            V.cells=[[v.w,v.h,v.x,v.y,1]]
+            V.cells=[[v.get(0),v.get(1),v.x,v.y,1]]
     }
     mul(m:Matrix):Matrix{
         throw("Not implemented yet")
     }
+
     
     Render(temp:boolean=false){
         if(super.update) super.update()
@@ -294,12 +250,12 @@ class Matrix extends Renderable{
             ctx.fillStyle=this.color
             ctx.fillText(this.name,view.transformX(0),view.transformY(0))
         }
-        ctx.fillStyle="white"
+        ctx.fillStyle=colorClear
         var x0=view.transformX(0)
         var y0=view.transformY(0)
         ctx.fillRect(x0,y0,view.transformX(this.columns)-x0-1,view.transformY(-this.rows)-y0-1)
         if(this.isSelected){
-          ctx.strokeStyle="#f00"
+          ctx.strokeStyle=colorSelection
           ctx.lineWidth=7
           ctx.strokeRect(x0-4,y0-4,view.transformX(this.columns)-x0+6,view.transformY(-this.rows)-y0+6)
         }
@@ -328,12 +284,15 @@ class Matrix extends Renderable{
 
 class Vector extends Renderable{
     cells:number[]
-
-    constructor(name:string,htmlNode:HTMLElement|null, cells:number[], update:Function|null=null){
-        super(name,htmlNode,0,0)
-        this.cells=cells
-        super.update=update
+    toString(): string {
+        return "["+this.cells.join(", ")+"]"
     }
+    constructor(name:string,htmlNode:HTMLElement|null, cells:number[], update:Function|null=null,x:number=0,y:number=0,color:string="#000"){
+        super(name,htmlNode,x,y,color,update)
+        this.cells=cells
+    }
+    get x2(){return this.x+this.get(0)}
+    get y2(){return this.y+this.get(1)}
     get(i:number){
         return this.cells[i]
     }
@@ -366,16 +325,39 @@ class Vector extends Renderable{
         for(var i=0; i<this.length; i++)
             sum+=this.get(i)*v.get(i)
         return sum
-    }
+    }get bounds():Rect{ return this.boundsSigned.bounds } // calling bounds makes x1 smaller than x2 etc
+    get boundsSigned():Rect{return new Rect(this.x,this.y,this.get(0),this.get(1))}
+    get magnitude2(){return Math.sqrt(this.get(0)**2+this.get(1)**2)}
+    get magnitude(){return Math.sqrt(this.dot(this))}
+    
     Render(temp:boolean=false){
         if(super.update) super.update()
+        
+        var r= view.transformRect(this.boundsSigned)
+        ctx.fillStyle = this.color
+        ctx.strokeStyle = this.color
 
-        if(!temp){
-            ctx.fillStyle=this.color
-            ctx.fillText(this.name,view.transformX(0),view.transformY(0))
+        if(this.isSelected) ctx.lineWidth=3
+        else ctx.lineWidth=1
+
+        var magnitude=this.magnitude
+        var normX=r.w/magnitude
+        var normY=r.h/magnitude
+        var arrowHeadSize=Math.min(magnitude*0.2,15/view.dx)
+        //Math.min(magnitude*0.1,0.2)
+        if(temp) ctx.strokeStyle=colorAxes
+        else{
+            var offsetY=5-Math.sign(this.get(1))*12
+            ctx.fillText(this.name,r.x2,r.y2+offsetY)
+            ctx.strokeStyle=this.color
         }
-        ctx.fillStyle="white"
-        var x0=view.transformX(0)
-        var y0=view.transformY(0)
+        ctx.beginPath()
+        ctx.moveTo(r.x,r.y)
+        ctx.lineTo(r.x2,r.y2)
+        ctx.lineTo(r.x2,r.y2)
+        ctx.lineTo(r.x2+(normY-normX)*arrowHeadSize,r.y2-(normX+normY)*arrowHeadSize)
+        ctx.moveTo(r.x2,r.y2)
+        ctx.lineTo(r.x2-(normY+normX)*arrowHeadSize,r.y2+(normX-normY)*arrowHeadSize)
+        ctx.stroke()
     }
 }

@@ -7,16 +7,19 @@ function doupload() {
       reader.onload = function(event) {
         if(event.target && event.target.readyState==2){
             let content = event.target!.result as string
-            var df = DataFrame.FromCSV(content)
-            //use df.toString to check contents ;)
+            var df = DataFrame.FromCSV(content,fileInput.files![0].name.split('.')[0])
             addRenderable(df)
+            eval(df.name+"=df")
+            df.htmlNode=appendLog(df.name,"dataframe ("+df.dataPrimitiveType+")","(cannot edit dataframe directly)",df.name)
             Render()
         }
       }
       reader.readAsText(file);
     }
 }
+
 class DataFrame extends Renderable{
+    //TIP: use df.toString to check contents ;)
     cells:any[][]
     primaryRow:string[] ; primaryColumn:string[]
     dataPrimitiveType:string
@@ -51,7 +54,6 @@ class DataFrame extends Renderable{
             closeCol=this.column(4)
             this.removeColumn(0)
             this.numeric()
-            console.log(timeCol[1]+", "+timeCol[timeCol.length-1])
             view=new ViewportNonlinear(
                 (x:number)=>{
                     return x*361/31190400
@@ -125,7 +127,9 @@ class DataFrame extends Renderable{
     }
     Render(){
         switch(this.dataPrimitiveType){
-            case 'yfinance':
+            case 'yfinance': // draws a candlestick graph
+            ctx.fillStyle=this.color
+            ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
                 for(const row of this.cells){
                     var x1=view.transformX((row[6]-this.cells[this.cells.length-1][6]),false,-1)
                     var x2=view.transformX((row[6]-this.cells[this.cells.length-1][6]),false)

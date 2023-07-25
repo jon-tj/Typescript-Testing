@@ -352,7 +352,7 @@ function Render(){
   var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w)
   getAxisNotches(view.x-view.w,view.x+view.w,notchInterval).forEach((x)=>{
     ctx.beginPath()
-    xT=view.transformX(x)
+    xT=view.transformX(x,true)
     ctx.strokeStyle="#bbb"
     ctx.moveTo(xT,yT-5) ; ctx.lineTo(xT,yT+5)
     ctx.stroke()
@@ -372,7 +372,7 @@ function Render(){
   notchInterval=getNotchInterval(view.y-view.h,view.y+view.h,20)
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
     ctx.beginPath()
-    yT=view.transformY(y)
+    yT=view.transformY(y,true)
     ctx.strokeStyle="#bbb"
     ctx.moveTo(xT-5,yT) ; ctx.lineTo(xT+5,yT)
     ctx.stroke()

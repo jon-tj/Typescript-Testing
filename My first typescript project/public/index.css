@@ -32,6 +32,7 @@ canvas{
   position: absolute;
   top:0;
   right:0;
+  z-index: -1;
   outline: none; /* Occurs when the user presses the shift key */
 }
 #console-form>input{
@@ -58,7 +59,6 @@ canvas{
   overflow-x: hidden;
 }
 #calc-window{
-  z-index: 1;
   opacity: 0.85;
   transition: opacity 0.3s, border-right 0.3s;
   border-right: 3px solid white;
@@ -94,8 +94,8 @@ top:-2em;
 li>p{
   margin:0
 }
-#navbar{background-color:rgb(92, 43, 43) ; padding-left: 5px;}
-#navbar>button{
+.navbar{background-color:rgb(92, 43, 43) ; padding-left: 5px;}
+.navbar>button{
   background-color: transparent;
   border: none;
   padding:0.3em;
@@ -103,7 +103,7 @@ li>p{
   margin-right: -4px;
   border-radius: 1em;
 }
-#navbar>button:hover{
+.navbar>button:hover{
   background-color: rgba(214, 143, 143, 0.2);
 }
 
@@ -135,4 +135,30 @@ li>button:hover{
 }
 li>button:active{
   background-color:rgb(224, 183, 183);
+}
+input[type=file]{
+  opacity: 0;
+  position: absolute;
+}
+#advanced-settings-container{
+  overflow: hidden;
+  transition: height 0.3s;
+  height:0px;
+  position: relative;
+  box-shadow: 0px 2px 5px rgb(87, 0, 0) inset;
+  background-color:rgb(92, 43, 43);
+}
+#advanced-settings{
+  background-color:transparent; 
+  position: absolute;
+  bottom:0;
+  left:0; right:0;
+  height:fit-content;
+  padding:0.5em;
+  overflow: hidden;
+}
+#advanced-settings>label{
+  color:rgb(160, 160, 160);
+  position: relative;
+  top:-0.5em;
 }

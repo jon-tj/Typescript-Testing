@@ -20,6 +20,9 @@ calcWindowDragArea.addEventListener("mousemove",(e)=>{
   e.preventDefault()
   if(e.buttons==1 && dragCalcWindow){
     calcWindow.style.width=e.x+"px"
+    // Since the advanced settings box is absolutely positioned, it looks dumb if we
+    // resize the window with the settings open, so just close it
+    document.querySelector<HTMLElement>("#advanced-settings-container")!.style.height="0px"
     calcWindowDragArea.style.left="calc(100% - 8em)"
     calcWindowDragArea.style.right="-8em"
   }else{
@@ -69,6 +72,7 @@ if(consoleInput) consoleInput.addEventListener("keyup",(e)=>{
 
 // welcome to hell
 function inputReceived(msg:string,submit:boolean=true){
+  
   msg=msg.replaceAll("alert","console.log")
   if(msg.length==0){
     if(submit){ // delete selected log if exists
@@ -80,6 +84,7 @@ function inputReceived(msg:string,submit:boolean=true){
         setSelection()  
       }
     }
+    else outputField.innerHTML=""
     return
   }
 
@@ -171,6 +176,9 @@ function inputReceived(msg:string,submit:boolean=true){
   }
   //#endregion
 
+  if(outAns && outAns.length>50){
+    outAns=outAns.substring(0,25)+" ... "+outAns.substring(outAns.length-25)
+  }
   var htmlNode:any=outputField
   if(submit){
     if(selectedHtmlNode){

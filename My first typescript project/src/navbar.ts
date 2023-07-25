@@ -25,9 +25,22 @@ function emptyLog(){
 function downloadFile(){
 
 }
-function uploadFile(){
-
-}
 function toggleSettings(){
-
+  var adv= document.querySelector<HTMLElement>("#advanced-settings-container")!
+  var advInner= document.querySelector<HTMLElement>("#advanced-settings")!
+  if(adv.clientHeight<30){
+    adv.style.height=advInner.clientHeight+"px"
+  }
+  else{
+    adv.style.height="0px"
+  }
+}
+function reset(){
+  view=new Viewport()
+  mouse.momentumX=0
+  mouse.momentumY=0
+  keys.Shift=false
+  keys.Control=false
+  setSelection()
+  Render()
 }

@@ -3,7 +3,6 @@ const tempColor="#ccc"
 const thinLine=1
 const thickLine=3
 
-
 class Rect{
     x:number;y:number;w:number;h:number
     constructor(x:number,y:number,w:number,h:number){
@@ -29,6 +28,7 @@ class Rect{
 }
 
 class Renderable{
+    toString():string{return this.name+":"+ typeof(this).toString()}
     name:string; x:number; y:number; color: string; angle:number; update:Function|null; display:boolean; htmlNode:HTMLElement|null
     constructor(name:string,htmlNode:HTMLElement|null, x:number=0,y:number=0, color:string|null=null, update:Function|null=null){
         this.name=name
@@ -62,6 +62,7 @@ class Renderable{
     }
 }
 class Point extends Renderable{
+    toString(): string { return "("+this.x+", "+this.y+")"}
     constructor(name:string,htmlNode:HTMLElement|null, x: number, y: number, color:string|null=null, update:Function|null=null) {
         super(name,htmlNode,x, y,color,update);
     }
@@ -87,6 +88,7 @@ class Point extends Renderable{
     }
 }
 class Vector2 extends Renderable{
+    toString(): string { return "("+this.w+", "+this.h+")"}
     w:number; h:number
     constructor(name:string,htmlNode:HTMLElement|null, x2: number, y2: number,x1:number=0,y1:number=0, color:string|null=null, update:Function|null=null) {
         super(name,htmlNode,x2, y2,color,update);
@@ -171,39 +173,6 @@ class Graph extends Renderable{
     }
     get bounds():Rect{
         return new Rect(this.x,this.y,0,0)
-    }
-}
-class Distribution extends Renderable{
-    bins:number[]; minX:number; maxX:number; data:number[]; maxCount:number
-    constructor(name:string,htmlNode:HTMLElement|null, data:number[],nBins:number,color:string|null=null, update:Function|null=null){
-        super(name,htmlNode,0,0,color,update)
-        this.data=data
-        this.minX=Math.min(...data)
-        this.maxX=Math.max(...data)
-
-        var sorted=structuredClone(data).sort((a, b) => a - b)
-        var binIdx=0
-        var increment=(this.maxX-this.minX)/nBins
-        var binThreshold=this.minX+increment
-        this.bins=[]
-
-        for(const v of sorted){
-            if(v>binThreshold){
-                binThreshold+=increment
-                binIdx++
-                this.bins.push(0)
-            }
-            this.bins[binIdx]++
-        }
-        this.maxCount=Math.max(...this.bins)
-
-    }
-    Render(temp:boolean=false){
-        if(super.update) super.update()
-        
-    }
-    get bounds():Rect{
-        return new Rect(this.minX,this.y-this.maxCount ,this.maxX-this.minX,this.maxCount)
     }
 }
 class Matrix extends Renderable{

@@ -3,13 +3,16 @@ function NewtonsMethod(f:Function,x:number=NaN){
     let iteration = 0;
 
     while (Math.abs(f(x)) > 0.000001 && iteration < 30) {
-        x = x - f(x) / derivateNaive(f)(x);
+        x = x - f(x) / der(f)(x);
         iteration++;
     }
     if(iteration==30) return NaN
     return x;
 }
-function NewtonsGrid(f:Function){
+function extremums(f:Function){
+    return roots(der(f))
+}
+function roots(f:Function){
     var roots:number[]=[]
     Array.from({ length: 21 }, (_, index) => index - 10).forEach((x)=>{
         var root=NewtonsMethod(f,x)
@@ -44,6 +47,6 @@ function mergeDuplicates(arr:number[], threshold:number=0.01):number[] {
     return sum
   }
 
-function derivateNaive(f:Function):Function{
+function der(f:Function):Function{
     return (x:number)=>(f(x+0.000001)-f(x))/0.000001
 }

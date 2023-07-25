@@ -7,13 +7,13 @@
     <meta name="description" content="Web site created using create-snowpack-app" />
     <link rel="stylesheet" type="text/css" href="/index.css" />
     
-    <title>Jons Calculator</title>
+    <title>Jon's Calculator</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="window-container">
       <aside id="calc-window">
-        <section id="navbar">
+        <section id="navbar" class="navbar">
           <button 
           onmouseenter="document.getElementById('fullscreen-button').src='icons/fullscreen_extended.png';"
           onmouseleave="document.getElementById('fullscreen-button').src='icons/fullscreen.png'"
@@ -27,12 +27,25 @@
           </button>
           <button onclick="downloadFile()"><img src="icons/save.png" id="save-button">
           </button>
-          <button onclick="uploadFile()"><img src="icons/upload.png" id="upload-button">
-          </button>
+        <button><label for="file-upload"><img src="icons/upload.png" id="upload-button">
+          </label></button>
           <button onclick="toggleSettings()"><img src="icons/settings.png" id="settings-button">
           </button>
+          
+          <input type="file" id="file-upload" name="file-upload" onchange="doupload()">
+          
         </section>
+        <section id="advanced-settings-container">
+          <section id="advanced-settings" class="navbar">
+    
+            <button  id="reset-button" onclick="reset()"><img src="icons/reset.png">
+            </button>
+            <label for="reset-button">Reset</label>
+          </section>
+        </section>
+        
         <div id="calc-window-drag-area"></div>
+        
         <ul id="log-box"></ul>
         <form id="console-form">
           <input type="text" id="console-input" tabindex="2">
@@ -42,6 +55,7 @@
       </aside>
       <aside id="graph-window">
         <canvas id="canvas" tabindex="1"></canvas>
+        <script src="/dist/renderable-objects.js"></script>
         <script>
           canvas.width=window.innerWidth;
           canvas.height=window.innerHeight;
@@ -53,10 +67,11 @@
 
           });
         </script>
-        <script src="/dist/renderable-objects.js"></script>
         <script src="/dist/index.js"></script>
         <script src="/dist/navbar.js"></script>
         <script src="/dist/rootFinder.js"></script>
+        <script src="/dist/file-upload.js"></script>
+        <script src="/dist/distributions.js"></script>
       </aside>
     </div>
     

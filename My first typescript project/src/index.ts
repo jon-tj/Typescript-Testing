@@ -19,22 +19,22 @@ class Viewport{
     return new Rect(this.transformX(r.x),this.transformY(r.y),r.w*this.dx,-r.h*this.dy)
   }
 
-  get dx(){ return canvas.width/this.w*0.5 } // can be confusing so here you go :)
+  get dx(){ return canvas.width/this.w*0.5 } // can be confusing so here you go ;)
   get dy(){ return canvas.height/this.h*0.5 }
 
-  transformX(x:number=0):number{
+  transformX(x:number=0,linear:boolean=true,linearOffset:number=0):number{
     return remap(x,this.x-this.w,this.x+this.w,0,canvas.width)
   }
-  transformY(y:number=0):number{
+  transformY(y:number=0,linear:boolean=true,linearOffset:number=0):number{
     return remap(y,this.y-this.h,this.y+this.h,canvas.height,0)
   }
   revertRect(r:Rect){
     return new Rect(this.revertX(r.x),this.revertY(r.y),r.w/this.dx,-r.h/this.dy)
   }
-  revertX(x:number=0):number{
+  revertX(x:number=0,linear:boolean=true):number{
     return remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
   }
-  revertY(y:number=0):number{
+  revertY(y:number=0,linear:boolean=true):number{
     return remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
   }
   pan(dx:number,dy:number):void{
@@ -43,8 +43,8 @@ class Viewport{
   }
   zoom(offset:number):void{
     // mx,my are used to zoom in at the cursor
-    var mx=this.revertX(mouse.x)
-    var my=this.revertY(mouse.y)
+    var mx=this.revertX(mouse.x,true)
+    var my=this.revertY(mouse.y,true)
     if(offset<0){
       var dx=(mx-this.x)*(1-1/1.1)
       this.x+=dx
@@ -62,9 +62,37 @@ class Viewport{
     }
   }
 }
+class ViewportNonlinear extends Viewport{
+  funcX:Function ; funcY:Function ; inverseX:Function ; inverseY:Function
+  constructor(
+  funcX:Function=(x:number)=>Math.log(x),
+  funcY:Function=(y:number)=>y,
+  inverseX:Function=(x:number)=>Math.pow(10,x),
+  inverseY:Function=(y:number)=>y){
+    super()
+    this.funcX=funcX
+    this.funcY=funcY
+    this.inverseX=inverseX
+    this.inverseY=inverseY
+  }
+  transformX(x:number=0,linear:boolean=false,linearOffset:number=0):number{
+    return remap(linear?x:this.funcX(x)+linearOffset,this.x-this.w,this.x+this.w,0,canvas.width)
+  }
+  transformY(y:number=0,linear:boolean=false):number{
+    return remap(linear?y:this.funcY(y),this.y-this.h,this.y+this.h,canvas.height,0)
+  }
+  revertX(x:number=0,linear:boolean=false):number{
+    x=remap(x,0,canvas.width,this.x-this.w,this.x+this.w)
+    return linear?x:this.inverseX(x)
+  }
+  revertY(y:number=0,linear:boolean=false):number{
+    y=remap(y,canvas.height,0,this.y-this.h,this.y+this.h)
+    return linear?y:this.inverseY(y)
+  }
+}
 const canvas=document.querySelector<HTMLCanvasElement>("#canvas")!; // saves me some headache
 const ctx=canvas.getContext("2d")!;
-const view=new Viewport()
+var view=new Viewport()
 
 // Setting up the environment variables
 const mouse={
@@ -73,7 +101,8 @@ const mouse={
   button:0,
   moved:0,
   selectionRect:{x:0,y:0,w:0,h:0} as Rect,
-  displaySelectionRect:false
+  displaySelectionRect:false,
+  clickTime:Date.now()
 }
 const renderables:Renderable[]=[]
 let legendY=0
@@ -95,8 +124,6 @@ const graphColors=[
   "#2980b9", // Dark Blue
   "#d35400"  // Pumpkin Orange
 ]
-const alphabet="abcdefghijklmnopqrstuvwxyz"
-const preferredFunctionNames="fghklmnopqrstuv" // omitting certain symbols, like 'i'
 
 // Important functions
 function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,override:boolean=true){
@@ -191,6 +218,13 @@ canvas.addEventListener("keyup",(e)=>{
 })
 canvas.addEventListener("contextmenu",(e)=>e.preventDefault()) // no right click menu on canvas
 canvas.addEventListener("mouseup",(e)=>{
+  if(defineVectorOrPoint && tempRenderable){
+    tempRenderable.htmlNode=appendLog(tempRenderable.name+"="+tempRenderable.toString(),null,"",tempRenderable.name)
+    addRenderable(tempRenderable)
+    setSelection(tempRenderable)
+    defineVectorOrPoint=false
+    tempRenderable=null
+  }
   e.preventDefault()
   mouse.button=e.button
   
@@ -236,33 +270,31 @@ canvas.addEventListener("mouseup",(e)=>{
   Render()
 })
 
-canvas.addEventListener("dblclick",(e)=>{ // create new point
-  var abcIdx=0
-  for(; abcIdx<alphabet.length; abcIdx++)
-    if(getRenderable(alphabet[abcIdx])==null)break
-  
-  var x=Math.round(view.revertX(e.x)*10000)/10000
-  var y=Math.round(view.revertY(e.y)*10000)/10000
-  var htmlNode=appendLog(alphabet[abcIdx]+"=("+x+", "+y+")",null,"",alphabet[abcIdx])
-  var newPoint=new Point(alphabet[abcIdx],htmlNode,x,y,graphColors[abcIdx%graphColors.length])
-  renderables.push(newPoint)
-  setSelection(newPoint)
-})
-
 canvas.addEventListener("mousemove",(e)=>{
   var mouseMoveX=mouse.x-e.x
   var mouseMoveY=mouse.y-e.y
   //mouse.button=e.buttons
   
-  if(mouse.button==1) // panning the viewport
+  if(mouse.button==1) // panning the viewport or drawing
   { 
-    canvas.style.cursor="grab"
-    mouse.moved+=mouseMoveX**2+mouseMoveY**2
-    // note that sum=0.9, since we the panning is called faster when the
-    // viewport is drifting than when the user is dragging around.
-    here:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
-    here:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
-    view.pan(mouseMoveX,mouseMoveY)
+    if(defineVectorOrPoint){
+      canvas.style.cursor="pointer"
+      var name=firstFreeName(abc)
+      var x=Math.round(view.revertX(e.x)*10000)/10000
+      var y=Math.round(view.revertY(e.y)*10000)/10000
+      var x0=Math.round(view.revertX(mouse.selectionRect.x)*10000)/10000
+      var y0=Math.round(view.revertY(mouse.selectionRect.y)*10000)/10000
+      tempRenderable=new Vector2(name,null,x0,y0,x-x0,y-y0,graphColors[renderables.length%graphColors.length])
+      outputField.innerHTML=name+"="+tempRenderable.toString()
+    }else{
+      canvas.style.cursor="grab"
+      mouse.moved+=mouseMoveX**2+mouseMoveY**2
+      // note: sum=0.9, since we the panning is called faster when the
+      // viewport is drifting than when the user is dragging around.
+      note:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
+      note:mouse.momentumY=mouseMoveY*0.1+mouse.momentumY*0.8
+      view.pan(mouseMoveX,mouseMoveY)
+    }
     Render()
   }
   else
@@ -279,10 +311,22 @@ canvas.addEventListener("mousemove",(e)=>{
   mouse.x=e.x ; mouse.y=e.y
 })
 
+var defineVectorOrPoint=false
 canvas.addEventListener("mousedown",(e)=>{
+  console.log(Date.now()-mouse.clickTime)
+  if((Date.now()-mouse.clickTime)<200){
+    defineVectorOrPoint=true
+    var name=firstFreeName(abc)
+    var x=Math.round(view.revertX(e.x)*10000)/10000
+    var y=Math.round(view.revertY(e.y)*10000)/10000
+    tempRenderable=new Point(name,null,x,y,graphColors[renderables.length%graphColors.length])
+    outputField.innerHTML=name+"="+tempRenderable.toString()
+  }
+  mouse.clickTime=Date.now()
+
   mouse.button=e.buttons
+  mouse.selectionRect=new Rect(e.x,e.y,0,0)
   if(mouse.button==2){
-    mouse.selectionRect=new Rect(e.x,e.y,0,0)
     mouse.displaySelectionRect=true
   }
 })
@@ -324,7 +368,7 @@ function Render(){
   var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w)
   getAxisNotches(view.x-view.w,view.x+view.w,notchInterval).forEach((x)=>{
     ctx.beginPath()
-    xT=view.transformX(x)
+    xT=view.transformX(x,true)
     ctx.strokeStyle="#bbb"
     ctx.moveTo(xT,yT-5) ; ctx.lineTo(xT,yT+5)
     ctx.stroke()
@@ -341,9 +385,10 @@ function Render(){
   var drawNumbersOnRightSide=xT<100+calcWindow.clientWidth
   ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
   ctx.stroke()
+  notchInterval=getNotchInterval(view.y-view.h,view.y+view.h,20)
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
     ctx.beginPath()
-    yT=view.transformY(y)
+    yT=view.transformY(y,true)
     ctx.strokeStyle="#bbb"
     ctx.moveTo(xT-5,yT) ; ctx.lineTo(xT+5,yT)
     ctx.stroke()
@@ -356,10 +401,10 @@ function Render(){
   })
   //#endregion
 
-  legendY=25
+  legendY=0
   legendX=Math.max(45,calcWindow.clientWidth+10)
   if(calcWindow.clientWidth<15){
-    legendY=240
+    legendY=220
     legendX=14
   }
   if(tempRenderable){

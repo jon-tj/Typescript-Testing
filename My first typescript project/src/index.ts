@@ -219,6 +219,15 @@ document.addEventListener("keydown",(e)=>{
     else setSelection(renderables)
     canvas.focus()
   }
+  if(e.key=="h" && e.ctrlKey){
+    if(selection.length==0) return
+    e.preventDefault()
+    var display=!selection[0].display
+    for(const i in selection)
+      if(selection[i] instanceof Renderable)
+        selection[i].display=display
+    Render()
+  }
   if(e.key=="f" && e.ctrlKey){ //fitting with linreg
     e.preventDefault()
     if(selection.length>0){
@@ -375,6 +384,7 @@ canvas.addEventListener("mousemove",(e)=>{
 
 var defineVectorOrPoint=false
 canvas.addEventListener("mousedown",(e)=>{
+  tempRenderable=null
   if((Date.now()-mouse.clickTime)<200){
     defineVectorOrPoint=true
     var name=firstFreeName(abc)
@@ -480,6 +490,7 @@ function Render(){
   }
   for(const i in renderables)
   {
+    if(!renderables[i].display) continue
     if(renderables[i].update) renderables[i].update!()
     renderables[i].Render()
   }

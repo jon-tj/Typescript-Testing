@@ -373,7 +373,7 @@ class Candle extends Renderable{
         this.close=close
         this.volume=volume
     }
-    RenderVirtual(xT:number){
+    RenderVirtual(xT:number){ // Saves some on resources ;)
         var x2=xT-view.dx
         var open=view.transformY(this.open)
         var high=view.transformY(this.high)
@@ -388,4 +388,6 @@ class Candle extends Renderable{
         ctx.fillRect((xT+x2)/2,low,1,high-low)
         ctx.fillRect(x2,close,xT-x2,open-close)
     }
+    
+    Render(){this.RenderVirtual(view.transformX(this.x))}
 }

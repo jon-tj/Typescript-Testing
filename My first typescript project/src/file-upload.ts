@@ -142,8 +142,10 @@ class DataFrame extends Renderable{
                 ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
                 const dx=view.dx
                 var xT=view.transformX(this.virtual[0].x)
-                for(const v of this.virtual)
-                    (v as VirtualCandle).RenderVirtual(xT+=dx)
+                for(const v of this.virtual){
+                    var x=xT+=dx
+                    if(v.display)(v as VirtualCandle).RenderVirtual(x)
+                }
                 break
             case 'ssb':
                 break

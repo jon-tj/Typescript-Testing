@@ -204,28 +204,31 @@ function sortRenderableObjects(){
 // Setting up listeners
 document.addEventListener("keydown",(e)=>{
   if(Object.keys(keys).includes(e.key)) keys[e.key]=true
-  if(e.key=="o" && e.ctrlKey){
+  if(e.key=="o" && e.ctrlKey){ // open file
     document.querySelector<HTMLInputElement>("#file-upload")!.click()
     e.preventDefault()
   }
-  if(e.key=="s" && e.ctrlKey){
+  if(e.key=="s" && e.ctrlKey){ // save to file
     downloadFile()
     e.preventDefault()
   }
-  if(e.key=="a" && e.ctrlKey && document.activeElement!==consoleInput){
+  if(e.key=="a" && e.ctrlKey && document.activeElement!==consoleInput){ // (toggle) select all
     e.preventDefault()
     if(selection.length==renderables.length && (selection[0] instanceof(Renderable) || getRenderable(selection[0].getAttribute("name")) ))
     setSelection()
     else setSelection(renderables)
     canvas.focus()
   }
-  if(e.key=="h" && e.ctrlKey){
+  if(e.key=="h" && e.ctrlKey){ // hide selection
     if(selection.length==0) return
     e.preventDefault()
     var display=!selection[0].display
     for(const i in selection)
-      if(selection[i] instanceof Renderable)
+      if(selection[i] instanceof Renderable){
         selection[i].display=display
+        for(const v of selection[i].virtual)
+          v.display=selection[i].display
+      }
     Render()
   }
   if(e.key=="f" && e.ctrlKey){ //fitting with linreg
@@ -291,9 +294,9 @@ canvas.addEventListener("mouseup",(e)=>{
   {
     var virtualRects=[]
     for(const r of renderables){
-      if(!r)continue
+      if(!r || !r.display)continue
       virtualRects.push(r)
-      for(const rr of r.virtual) virtualRects.push(rr)
+      for(const rr of r.virtual) if(rr.display) virtualRects.push(rr)
     }
     if(mouse.displaySelectionRect) // select rectangle
     {

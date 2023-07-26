@@ -135,9 +135,12 @@ const graphColors=[
 // Important functions
 function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,override:boolean=true){
   if(override && objects==null){
-    for(const r of selection)
-      if(r.htmlNode) r.htmlNode.classList.remove("selected")
-      else if(r instanceof HTMLElement) r.classList.remove("selected")
+    for(var r=0; r<selection.length; r++){
+      if(selection[r]){
+        if(selection[r].htmlNode) selection[r].htmlNode.classList.remove("selected")
+        else if(selection[r] instanceof HTMLElement) selection[r].classList.remove("selected")
+      }else selection.splice(r,1)
+    }
     selection.length=0
     consoleInput.value=""
     outputField.innerHTML=""
@@ -160,7 +163,7 @@ function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,over
     if(objects instanceof Renderable){
       if(objects.htmlNode && objects.htmlNode.hasAttribute("value"))
         consoleInput.value=objects.htmlNode.getAttribute("value")!
-    }else{
+    }else if(objects){
       if(objects!.hasAttribute("value"))
         consoleInput.value=objects!.getAttribute("value")!
         objects!.classList.add("selected")
@@ -169,11 +172,11 @@ function setSelection(objects:Renderable[]|Renderable|HTMLElement|null=null,over
     outputField.innerHTML=""
   }
   for(const r of selection)
-    if(r.htmlNode) r.htmlNode.classList.add("selected")
+    if(r && r.htmlNode) r.htmlNode.classList.add("selected")
   if(selection.length>0){
     if(selection[selection.length-1] instanceof HTMLElement)
       selectedHtmlNode=selection[selection.length-1]
-    else selectedHtmlNode=selection[selection.length-1].htmlNode
+    else if(selection[selection.length-1])selectedHtmlNode=selection[selection.length-1].htmlNode
   }else selectedHtmlNode=null
   Render()
 }
@@ -317,9 +320,9 @@ canvas.addEventListener("mouseup",(e)=>{
       var x=view.revertX(e.x)
       var y=view.revertY(e.y)
 
-      var Dist=(x1:number,y1:number,x2:number,y2:number)=>(x1-x2)**2+(y1-y2)**2
-      var minDist=200/view.dx**2 // do not select something if its super far away
-
+      var Dist=(x1:number,y1:number,x2:number,y2:number)=>((x1-x2)*view.dx)**2+((y1-y2)*view.dy)**2
+      var minDist=200// do not select something if its super far away
+      var minRo=null
       if(!keys.Shift) setSelection() // deselects all
       for(var r of virtualRects){
         var dist=0
@@ -328,9 +331,10 @@ canvas.addEventListener("mouseup",(e)=>{
         else dist=Dist(x,y,r.x,r.y)
         if(dist<minDist){
           minDist=dist
-          setSelection(r,!keys.Shift)
+          minRo=r
         }
       }
+      setSelection(minRo,!keys.Shift)
     }
   }
   

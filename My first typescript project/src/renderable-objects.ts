@@ -62,6 +62,9 @@ class Renderable{
     }
     get isSelected(){ return selection.includes(this) }
     Render(temp:boolean=false){throw "Do not render Renderable primitive >:("}
+    setOption(optName:string,value:string){ // virtual
+        this.options[optName]=value
+    }
     Legend(msg:string){
         legendY+=25
         ctx.fillStyle=this.options.color
@@ -89,6 +92,21 @@ class Point extends Renderable{
             ctx.fillStyle = this.options.color
             ctx.fillText(this.name,x+8,y+5)
         }
+        ctx.beginPath();
+        ctx.arc(x,y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    RenderVirtual(){
+        var x=view.transformX(this.x)
+        var y=view.transformY(this.y)
+
+        if(this.isSelected){
+            ctx.fillStyle = colorSelection;
+            ctx.beginPath();
+            ctx.arc(x,y, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        ctx.fillStyle = this.options.color
         ctx.beginPath();
         ctx.arc(x,y, 6, 0, 2 * Math.PI);
         ctx.fill();
@@ -329,7 +347,7 @@ class Vector extends Renderable{
         return sum
     }get bounds():Rect{ return this.boundsSigned.bounds } // calling bounds makes x1 smaller than x2 etc
     get boundsSigned():Rect{return new Rect(this.x,this.y,this.get(0),this.get(1))}
-    get magnitude2(){return Math.sqrt(this.get(0)**2+this.get(1)**2)}
+    get magnitude2d(){return Math.sqrt(this.get(0)**2+this.get(1)**2)}
     get magnitude(){return Math.sqrt(this.dot(this))}
     
     Render(temp:boolean=false){
@@ -353,6 +371,30 @@ class Vector extends Renderable{
             ctx.fillText(this.name,r.x2,r.y2+offsetY)
             ctx.strokeStyle=this.options.color
         }
+        ctx.beginPath()
+        ctx.moveTo(r.x,r.y)
+        ctx.lineTo(r.x2,r.y2)
+        ctx.lineTo(r.x2,r.y2)
+        ctx.lineTo(r.x2+(normY-normX)*arrowHeadSize,r.y2-(normX+normY)*arrowHeadSize)
+        ctx.moveTo(r.x2,r.y2)
+        ctx.lineTo(r.x2-(normY+normX)*arrowHeadSize,r.y2+(normX-normY)*arrowHeadSize)
+        ctx.stroke()
+    }
+    
+    RenderVirtual(){
+        var r= view.transformRect(this.boundsSigned)
+        ctx.fillStyle = this.options.color
+        ctx.strokeStyle = this.options.color
+
+        if(this.isSelected) ctx.lineWidth=3
+        else ctx.lineWidth=1
+
+        var magnitude=this.magnitude
+        var normX=r.w/magnitude
+        var normY=r.h/magnitude
+        var arrowHeadSize=Math.min(magnitude*0.07,5/view.dx)
+
+        ctx.strokeStyle=this.options.color
         ctx.beginPath()
         ctx.moveTo(r.x,r.y)
         ctx.lineTo(r.x2,r.y2)

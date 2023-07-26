@@ -455,7 +455,7 @@ function hideAllOptions(){
     o.style.display="none"
   }
 }
-function addLogOptions(msg:string,htmlNode:HTMLElement,ro:Renderable|null=null){
+function addLogOptions(msg:string,htmlNode:HTMLElement,ro:Renderable|null){
   var container=document.createElement("section")
   container.style.display="none"
   container.classList.add("options-container")
@@ -468,7 +468,7 @@ function addLogOptions(msg:string,htmlNode:HTMLElement,ro:Renderable|null=null){
         child.classList.remove("selected")
       sender.classList.add("selected")
       if(ro)
-        ro.options[slideSel!.getAttribute("name") as string]=sender.innerHTML
+        ro.setOption(slideSel!.getAttribute("name") as string,sender.innerHTML)
       Render()
     }
     for(const child of slideSel!.children[0].children[0].children){

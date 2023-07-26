@@ -21,7 +21,7 @@ function doupload() {
                     <td id='Points'>Points</td>
                     <td id='Vectors'>Vectors</td>
                     <td id='Graph'>Graph</td>
-                </table></tr></section>`,df.htmlNode)
+                </table></tr></section>`,df.htmlNode,df)
             Render()
         }
       }
@@ -68,11 +68,7 @@ class DataFrame extends Renderable{
             closeCol=this.column(4)
             this.removeColumn(0)
             this.numeric()
-            for(var i=0; i<this.cells.length; i++){
-                var name=this.name+".virtual["+i+"]"
-                this.virtual.push(new Candle(name,i-timeCol.length,this.cells[i][0],this.cells[i][1],this.cells[i][2],this.cells[i][3],this.cells[i][5]))
-                
-            }
+            this.setOption("representation","Candles")
 
             this.maxVal=Math.max(... this.column(5))
             view.w=100
@@ -142,9 +138,21 @@ class DataFrame extends Renderable{
                 ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
                 const dx=view.dx
                 var xT=view.transformX(this.virtual[0].x)
-                for(const v of this.virtual){
-                    var x=xT+=dx
-                    if(v.display)(v as Candle).RenderVirtual(x)
+                if(this.options.representation=="Candles")
+                    for(const v of this.virtual){
+                        var x=xT+=dx
+                        if(v.display)(v as Candle).RenderVirtual(x)
+                    }
+                else if(this.virtual.length>0)
+                    for(const v of this.virtual)
+                        if(v.display)(v as Point).RenderVirtual()
+                else{
+                    //ctx.moveTo(view.transformX(-this.cells.length),view.transformY)
+                    for(var i=0; i<this.cells.length; i++){
+                        ctx.lineTo
+                        var name=this.name+".virtual["+i+"]"
+                        this.virtual.push(new Vector(name,null,[1,this.cells[i][3]-this.cells[i][0]],null,i-this.cells.length,this.cells[i][0],this.cells[i][7]>0?"#1f3":"#f13"))
+                    }
                 }
                 break
             case 'ssb':
@@ -155,5 +163,31 @@ class DataFrame extends Renderable{
     }
     get bounds(): Rect {
         return new Rect(Infinity,Infinity,-1,-1)
+    }
+    setOption(optName: string, value: string): void {
+        this.options[optName]=value
+        if(optName=="representation"){
+            this.virtual.length=0
+            switch(value){
+                case "Candles":
+                    for(var i=0; i<this.cells.length; i++){
+                        var name=this.name+".virtual["+i+"]"
+                        this.virtual.push(new Candle(name,i-this.cells.length,this.cells[i][0],this.cells[i][1],this.cells[i][2],this.cells[i][3],this.cells[i][5]))
+                    }
+                    break
+                case "Points":
+                    for(var i=0; i<this.cells.length; i++){
+                        var name=this.name+".virtual["+i+"]"
+                        this.virtual.push(new Point(name,null,i-this.cells.length,this.cells[i][3],this.cells[i][7]>0?"#1f3":"#f13"))
+                    }
+                    break
+                case "Vectors":
+                    for(var i=0; i<this.cells.length; i++){
+                        var name=this.name+".virtual["+i+"]"
+                        this.virtual.push(new Vector(name,null,[1,this.cells[i][3]-this.cells[i][0]],null,i-this.cells.length,this.cells[i][0],this.cells[i][7]>0?"#1f3":"#f13"))
+                    }
+                    break
+            }
+        }
     }
 }

@@ -183,3 +183,8 @@ button>span{
   position: relative;
   display: inline-block;
 }
+td{border-left: 1px solid var(--log-selected-bg); text-align:center; padding:0.5em;}
+td:first-child{border: none;}
+td.selected{background-color: var(--log-selected-bg); color: var(--console-bg);border-radius: 0.3em;}
+table.slide-select{width: 100%;color:var(--log-selected-bg);}
+section.padded{border-radius: 0.3em;background-color: var(--console-bg);}

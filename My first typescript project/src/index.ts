@@ -48,17 +48,23 @@ class Viewport{
     if(offset<0){
       var dx=(mx-this.x)*(1-1/1.1)
       this.x+=dx
-      var dy=(my-this.y)*(1-1/1.1)
-      this.y+=dy
       this.w/=1.1 // only scaling w,h leads to zooming about the origin
-      this.h/=1.1
+      if(!keys.Shift){
+        var dy=(my-this.y)*(1-1/1.1)
+        this.y+=dy
+        this.h/=1.1
+      }else
+      canvas.style.cursor="ew-resize"
     }else{
       var dx=(mx-this.x)*(1-1.1)
       this.x+=dx
-      var dy=(my-this.y)*(1-1.1)
-      this.y+=dy
       this.w*=1.1
-      this.h*=1.1
+      if(!keys.Shift){
+        var dy=(my-this.y)*(1-1.1)
+        this.y+=dy
+        this.h*=1.1
+      }else
+      canvas.style.cursor="ew-resize"
     }
   }
 }
@@ -102,8 +108,9 @@ const mouse={
   moved:0,
   selectionRect:{x:0,y:0,w:0,h:0} as Rect,
   displaySelectionRect:false,
-  clickTime:Date.now()
+  clickTime:Date.now(),
 }
+
 const renderables:Renderable[]=[]
 let legendY=0
 let legendX=0
@@ -205,6 +212,33 @@ document.addEventListener("keydown",(e)=>{
     downloadFile()
     e.preventDefault()
   }
+  if(e.key=="a" && e.ctrlKey && document.activeElement!==consoleInput){
+    e.preventDefault()
+    if(selection.length==renderables.length && (selection[0] instanceof(Renderable) || getRenderable(selection[0].getAttribute("name")) ))
+    setSelection()
+    else setSelection(renderables)
+    canvas.focus()
+  }
+  if(e.key=="f" && e.ctrlKey){ //fitting with linreg
+    e.preventDefault()
+    if(selection.length>0){
+      if(selection[0] instanceof(Renderable)){
+        var evalString="linreg("
+        for(const s of selection){
+          if(s instanceof(HTMLElement))return
+          evalString+=s.name+", "
+        }
+        evalString=evalString.substring(0,evalString.length-2)+")"
+        if(isValidEvalString(evalString)){
+          setSelection()
+          var name=firstFreeName(fgh)
+          const g=new Graph(name,appendLog(name+"(x)",evalString,evalString,name),evalOutput as Function,graphColors[renderables.length%graphColors.length])
+          addRenderable(g)
+          Render()
+        }
+      }
+    }
+  }
   if(e.key=="Delete"){
     if(e.shiftKey){ // delete everything
       emptyLog()
@@ -237,24 +271,30 @@ canvas.addEventListener("mouseup",(e)=>{
   if(defineVectorOrPoint && tempRenderable){
     tempRenderable.htmlNode=appendLog(tempRenderable.name+"="+tempRenderable.toString(),null,"",tempRenderable.name)
     addRenderable(tempRenderable)
+    eval(tempRenderable.name+"=tempRenderable")
     setSelection(tempRenderable)
     defineVectorOrPoint=false
     tempRenderable=null
   }
-  e.preventDefault()
   mouse.button=e.button
   
   if(mouse.moved<10)
   {
+    var virtualRects=[]
+    for(const r of renderables){
+      if(!r)continue
+      virtualRects.push(r)
+      for(const rr of r.virtual) virtualRects.push(rr)
+    }
     if(mouse.displaySelectionRect) // select rectangle
     {
       var selRect=view.revertRect(mouse.selectionRect).bounds
       console.log(selRect)
       var inSelection=[]
-      for(const r in renderables){
-        if(selection.includes(renderables[r])) continue
-        if(selRect.Intersects(renderables[r].bounds))
-        inSelection.push(renderables[r])
+      for(const r of virtualRects){
+        if(selection.includes(r)) continue
+        if(selRect.Intersects(r.bounds))
+        inSelection.push(r)
       }
       setSelection(inSelection)
       mouse.displaySelectionRect=false
@@ -269,14 +309,14 @@ canvas.addEventListener("mouseup",(e)=>{
       var minDist=200/view.dx**2 // do not select something if its super far away
 
       if(!keys.Shift) setSelection() // deselects all
-      for(var r in renderables){
+      for(var r of virtualRects){
         var dist=0
-        if(renderables[r] instanceof Vector)
-          dist=Dist(x,y,(renderables[r] as Vector).x2,(renderables[r] as Vector).y2)
-        else dist=Dist(x,y,renderables[r].x,renderables[r].y)
+        if(r instanceof Vector)
+          dist=Dist(x,y,(r as Vector).x2,(r as Vector).y2)
+        else dist=Dist(x,y,r.x,r.y)
         if(dist<minDist){
           minDist=dist
-          setSelection(renderables[r],!keys.Shift)
+          setSelection(r,!keys.Shift)
         }
       }
     }
@@ -303,8 +343,14 @@ canvas.addEventListener("mousemove",(e)=>{
       tempRenderable=new Vector(name,null,[x-x0,y-y0],null,x0,y0,graphColors[renderables.length%graphColors.length])
       outputField.innerHTML=name+"="+tempRenderable.toString()
     }else{
-      canvas.style.cursor="grab"
+      canvas.style.cursor="grabbing"
       mouse.moved+=mouseMoveX**2+mouseMoveY**2
+      if(keys.Shift){
+        if(Math.abs(mouseMoveX+mouse.momentumX*5)>Math.abs(mouseMoveY+mouse.momentumY*5))
+          mouseMoveY=0
+        else mouseMoveX=0
+      }
+
       // note: sum=0.9, since we the panning is called faster when the
       // viewport is drifting than when the user is dragging around.
       note:mouse.momentumX=mouseMoveX*0.1+mouse.momentumX*0.8
@@ -386,7 +432,7 @@ function Render(){
   var yT=clamp(view.transformY(),5,canvas.height-23)
   ctx.moveTo(0,yT) ; ctx.lineTo(canvas.width,yT)
   ctx.stroke()
-  var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w)
+  var notchInterval=getNotchInterval(view.x-view.w,view.x+view.w,canvas.width)
   getAxisNotches(view.x-view.w,view.x+view.w,notchInterval).forEach((x)=>{
     ctx.beginPath()
     xT=view.transformX(x,true)
@@ -406,7 +452,7 @@ function Render(){
   var drawNumbersOnRightSide=xT<100+calcWindow.clientWidth
   ctx.moveTo(xT,0) ; ctx.lineTo(xT,canvas.width)
   ctx.stroke()
-  notchInterval=getNotchInterval(view.y-view.h,view.y+view.h,20)
+  notchInterval=getNotchInterval(view.y-view.h,view.y+view.h,canvas.height)
   getAxisNotches(view.y-view.h,view.y+view.h,notchInterval).forEach((y)=>{
     ctx.beginPath()
     yT=view.transformY(y,true)
@@ -460,9 +506,9 @@ function clamp(x:number,min:number,max:number){
   if(x>max)return max
   return x
 }
-function getNotchInterval(from:number,to:number,nNotchesOptimal:number=35){
+function getNotchInterval(from:number,to:number,size:number){
   var range=Math.abs(to-from)
-  var optimalNotchDistance=100*range/nNotchesOptimal
+  var optimalNotchDistance=100*range/(size/50)
   var notchDistance=0.01
   function iterFindNotch(){
     if(optimalNotchDistance<1) return true

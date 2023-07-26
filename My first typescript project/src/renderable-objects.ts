@@ -33,17 +33,20 @@ class Rect{
 
 class Renderable{
     toString():string{return this.name+":"+ typeof(this).toString()}
-    name:string; x:number; y:number; color: string; angle:number; update:Function|null; display:boolean; htmlNode:HTMLElement|null
+    name:string; x:number; y:number; angle:number; update:Function|null; display:boolean; htmlNode:HTMLElement|null
+    options:{[key:string]:string}
+    virtual:Renderable[]
     constructor(name:string,htmlNode:HTMLElement|null, x:number=0,y:number=0, color:string|null=null, update:Function|null=null){
         this.name=name
         this.htmlNode=htmlNode
         this.x=x
         this.y=y
-        if(color) this.color=color
-        else this.color="#333"
+        if(!color)color="#333"
         this.angle=0
         this.update=update
         this.display=true
+        this.options={"color":color}
+        this.virtual=[]
     }
     get bounds():Rect{
         return new Rect(this.x,this.y,0,0) // point
@@ -61,7 +64,7 @@ class Renderable{
     Render(temp:boolean=false){throw "Do not render Renderable primitive >:("}
     Legend(msg:string){
         legendY+=25
-        ctx.fillStyle=this.color
+        ctx.fillStyle=this.options.color
         ctx.fillText(msg,legendX,legendY)
     }
 }
@@ -83,7 +86,7 @@ class Point extends Renderable{
         }
         if(temp) ctx.fillStyle = colorAxes
         else{
-            ctx.fillStyle = this.color
+            ctx.fillStyle = this.options.color
             ctx.fillText(this.name,x+8,y+5)
         }
         ctx.beginPath();
@@ -123,7 +126,7 @@ class Graph extends Renderable{
         if(temp) ctx.strokeStyle=colorAxes
         else{
             this.Legend(this.name+"(x)")
-            ctx.strokeStyle=this.color
+            ctx.strokeStyle=this.options.color
         }
         ctx.stroke()
     }
@@ -247,7 +250,7 @@ class Matrix extends Renderable{
         if(super.update) super.update()
 
         if(!temp){
-            ctx.fillStyle=this.color
+            ctx.fillStyle=this.options.color
             ctx.fillText(this.name,view.transformX(0),view.transformY(0))
         }
         ctx.fillStyle=colorClear
@@ -260,7 +263,7 @@ class Matrix extends Renderable{
           ctx.strokeRect(x0-4,y0-4,view.transformX(this.columns)-x0+6,view.transformY(-this.rows)-y0+6)
         }
         
-        ctx.strokeStyle=this.color
+        ctx.strokeStyle=this.options.color
     
         var min=this.min()
         var max=this.max()
@@ -281,7 +284,6 @@ class Matrix extends Renderable{
         return new Rect(this.x,this.y,this.columns,-this.rows).bounds
     }
 }
-
 class Vector extends Renderable{
     cells:number[]
     toString(): string {
@@ -334,8 +336,8 @@ class Vector extends Renderable{
         if(super.update) super.update()
         
         var r= view.transformRect(this.boundsSigned)
-        ctx.fillStyle = this.color
-        ctx.strokeStyle = this.color
+        ctx.fillStyle = this.options.color
+        ctx.strokeStyle = this.options.color
 
         if(this.isSelected) ctx.lineWidth=3
         else ctx.lineWidth=1
@@ -349,7 +351,7 @@ class Vector extends Renderable{
         else{
             var offsetY=5-Math.sign(this.get(1))*12
             ctx.fillText(this.name,r.x2,r.y2+offsetY)
-            ctx.strokeStyle=this.color
+            ctx.strokeStyle=this.options.color
         }
         ctx.beginPath()
         ctx.moveTo(r.x,r.y)
@@ -359,5 +361,44 @@ class Vector extends Renderable{
         ctx.moveTo(r.x2,r.y2)
         ctx.lineTo(r.x2-(normY+normX)*arrowHeadSize,r.y2+(normX-normY)*arrowHeadSize)
         ctx.stroke()
+    }
+}
+class VirtualVector extends Vector{
+    constructor(x:number,y:number,w:number,h:number,color:string|null=null){
+        if(!color)color="#fff"
+        super("vector",null,[w,h],null,x,y,color)
+    }
+}
+
+class VirtualPoint extends Point{
+    constructor(x:number,y:number,color:string|null=null){
+        if(!color)color="#fff"
+        super("point",null,x,y,color)
+    }
+}
+class VirtualCandle extends Renderable{
+    open:number;high:number;low:number; close:number; volume:number
+    constructor(name:string,x:number,open:number,high:number,low:number,close:number,volume:number){
+        super(name,null,x,open,close>open?"#1f3":"#f13")
+        this.open=open
+        this.high=high
+        this.low=low
+        this.close=close
+        this.volume=volume
+    }
+    RenderVirtual(xT:number){
+        var x2=xT-view.dx
+        var open=view.transformY(this.open)
+        var high=view.transformY(this.high)
+        var low=view.transformY(this.low)
+        var close=view.transformY(this.close)
+        
+        ctx.fillStyle= this.options.color
+        if(this.isSelected){
+            ctx.fillStyle= colorSelection
+            ctx.fillRect((xT+x2)/2-1,low-1,3,high-low)
+        }
+        ctx.fillRect((xT+x2)/2,low,1,high-low)
+        ctx.fillRect(x2,close,xT-x2,open-close)
     }
 }

@@ -10,9 +10,18 @@ function doupload() {
             var name=fileInput.files![0].name.split('.')[0]
             name=name.replaceAll("(","").replaceAll(")","").replaceAll(" ","")
             var df = DataFrame.FromCSV(content,name)
+            df.options['representation']='Candles'
             addRenderable(df)
             eval(name+"=df")
             df.htmlNode=appendLog(name,"dataframe ("+df.dataPrimitiveType+")","(cannot edit dataframe directly)",name)
+            addLogOptions(`<label for='representation'>Representation</label>
+                <section class='padded'>
+                <table class='slide-select' name='representation'><tr>
+                    <td id='Candles' class='selected'>Candles</td>
+                    <td id='Points'>Points</td>
+                    <td id='Vectors'>Vectors</td>
+                    <td id='Graph'>Graph</td>
+                </table></tr></section>`,df.htmlNode)
             Render()
         }
       }
@@ -26,6 +35,7 @@ class DataFrame extends Renderable{
     maxVal:number
     primaryRow:string[] ; primaryColumn:string[]
     dataPrimitiveType:string
+
     constructor(name:string,htmlNode:HTMLElement|null,cells:string[][],primaryRowIdx:number=0,primaryColumnIdx:number=0){
         super(name,htmlNode)
         this.cells=cells
@@ -58,6 +68,12 @@ class DataFrame extends Renderable{
             closeCol=this.column(4)
             this.removeColumn(0)
             this.numeric()
+            for(var i=0; i<this.cells.length; i++){
+                var name=this.name+".virtual["+i+"]"
+                this.virtual.push(new VirtualCandle(name,i-timeCol.length,this.cells[i][0],this.cells[i][1],this.cells[i][2],this.cells[i][3],this.cells[i][5]))
+                
+            }
+
             this.maxVal=Math.max(... this.column(5))
             view.w=100
             var max=Math.max(...closeCol.slice(-view.w))
@@ -122,30 +138,12 @@ class DataFrame extends Renderable{
     Render(){
         switch(this.dataPrimitiveType){
             case 'yf': // draws a candlestick graph
-                ctx.fillStyle=this.color
+                ctx.fillStyle=this.options.color
                 ctx.fillText(this.name,view.transformX(0),view.transformY(this.cells[this.cells.length-1][3]))
-                const y0=Math.min(view.transformY(),canvas.height-23)
-                const volMul=Math.min(view.dy*10,canvas.height)/this.maxVal
-                var i=0
-                for(const row of this.cells){
-                    var days=++i-this.cells.length
-                    //var days=row[6]-this.cells[this.cells.length-1][6]
-                    var x1=view.transformX((days-1))
-                    var x2=view.transformX((days))
-                    var open=view.transformY(row[0])
-                    var high=view.transformY(row[1])
-                    var low=view.transformY(row[2])
-                    var close=view.transformY(row[3])
-                    var volume=row[5]
-                    if(this.isSelected){
-                        ctx.fillStyle= colorAxes
-                        ctx.fillRect(x1,y0,view.dx,-volume*volMul)
-                    }
-                    var development=row[7]
-                    ctx.fillStyle= development>0?"green":"red"
-                    ctx.fillRect((x1+x2)/2,low,1,high-low)
-                    ctx.fillRect(x2,close,x1-x2,open-close)
-                }
+                const dx=view.dx
+                var xT=view.transformX(this.virtual[0].x)
+                for(const v of this.virtual)
+                    (v as VirtualCandle).RenderVirtual(xT+=dx)
                 break
             case 'ssb':
                 break

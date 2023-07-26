@@ -2,7 +2,7 @@
 /// <reference path="index.ts"/>
 
 // Preferences
-const abc="abcdefghijklmnopqrstuvw" // names for everything else
+const abc="abcdfghijklmnopqrstuvw" // names for everything else
 const fgh="fghklmnopqrstuv" // function names
 const mno="MNOPQRSTUVW" // matrix names
 const distNames="DEFGHIJKL"
@@ -75,10 +75,11 @@ calcWindowDragArea.addEventListener("dblclick",(e)=>{
 calcWindowDragArea.addEventListener("mouseleave",(e)=>{
   calcWindow.classList.remove("drag")
 })
+logBox.addEventListener("mouseleave",hideAllOptions)
 //#endregion
 
 //#region Input listeners
-if(logBox) logBox.addEventListener("mousedown",(e)=>{ setSelection() })
+if(logBox) logBox.addEventListener("mousedown",(e)=>{ setSelection();  })
 
 if(consoleForm && consoleInput) consoleForm.addEventListener("submit",(e)=>{
   randomPlaceholder()
@@ -138,6 +139,7 @@ function inputReceived(msg:string,submit:boolean=true){
     if(submit) eval(outMsg)
   }
   else{
+    var wasFunction=false
     var testString=prepareStringForEval(rightHand)
     if(testString.match(/(^|\d|\(|\s|[+\-*/])x/g) || leftHand && leftHand.match(/(^|\d|\(|\s|[+\-*/])x/g)){ // defining a function (only if x not in a word, T.rex is not a function)
       if(leftHand && !leftHand.match(/[()]/)) leftHand=leftHand+"(x)"
@@ -145,23 +147,28 @@ function inputReceived(msg:string,submit:boolean=true){
       outMsg=leftHand
       outAns=rightHand
       var displayName=leftHand.substring(0,leftHand.indexOf("("))
-      msg=cleanupFuncString(rightHand)
-      if(msg.replaceAll(" ","").match(`(?<!\S)${displayName}\\(`)){ //circular definition
-        outMsg="Circular definition: "+ leftHand+" = "+rightHand
-        outAns=null
-      }
-      else if(isValidEvalString(displayName+"=(x)=>{ return ("+msg+") }")){
-        const graphFunc=evalOutput
-        console.log(eval(displayName))
-        if(isValidEvalString(displayName+"(0)",false))
-          outRO=new Graph(displayName,null,graphFunc as Function,graphColors[renderables.length%graphColors.length])
-        else{
-          outMsg="Undefined: "+leftHand+" = "+rightHand
+      var funcString=cleanupFuncString(rightHand)
+      if(isValidEvalString(funcString) && evalOutput instanceof(Function)){ //like linreg()
+        wasFunction=false
+      }else{
+        wasFunction=true
+        if(funcString.replaceAll(" ","").match(`(?<!\S)${displayName}\\(`)){ //circular definition
+          outMsg="Circular definition: "+ leftHand+" = "+rightHand
           outAns=null
+        }
+        else if(isValidEvalString(displayName+"=(x)=>{ return ("+funcString+") }")){
+          const graphFunc=evalOutput
+          if(isValidEvalString(displayName+"(0)",false))
+            outRO=new Graph(displayName,null,graphFunc as Function,graphColors[renderables.length%graphColors.length])
+          else{
+            outMsg="Undefined: "+leftHand+" = "+rightHand
+            outAns=null
+          }
         }
       }
     }
-    else{
+    if(!wasFunction){
+      
       if(rightHandReduced.startsWith("[[")){ // defining a matrix
         var name=leftHand?leftHand:firstFreeName(mno)
 
@@ -210,8 +217,9 @@ function inputReceived(msg:string,submit:boolean=true){
         outAns=rightHand
       }else{
 
-        if(!leftHand) leftHand=firstFreeName(abc) // beyond this point we use ABC names :)
+        
         if(rightHandReduced.startsWith("[")){ // defining a vector
+          if(!leftHand) leftHand=firstFreeName(abc) 
           var name=submit?firstFreeName(abc):"temp"
           var args1=rightHandReduced.substring(1).replace("]","").split(/[;,]/)
           if(args1.length==1 && rightHandReduced.endsWith(")")){ // iterative notation, [i+1](4) --> [1,2,3,4] etc
@@ -243,19 +251,51 @@ function inputReceived(msg:string,submit:boolean=true){
           }
         }
         if(rightHandReduced.startsWith("(") && msg.match(/[;,]/)){ // defining a point
+          if(!leftHand) leftHand=firstFreeName(abc) 
           var args=rightHand.split(/[,;]/)
           outRO=new Point(submit?firstFreeName(abc):"temp",null,0,0,"#000",()=>{
             outRO!.x=evalMath(args[0]) as number
             outRO!.y=evalMath(args[1]) as number
           })
+          eval(leftHand+"=outRO")
           outMsg=leftHand
           outAns=rightHand
         }
-        else{ // defining a variable or just doing arithmetic
-          
-          if(isValidEvalString(msg) && evalOutput && !evalOutput.toString().startsWith("function") && !evalOutput.toString().startsWith("(x)=>")){
-            msg=beautifyMathString(msg)
-            if(msg.includes("=")){
+        else{ // defining a variable or a (predefined)function or just doing arithmetic
+          if(isValidEvalString(rightHand) && evalOutput && !evalOutput.toString().startsWith("function") && !evalOutput.toString().startsWith("(x)=>")){
+            if(evalOutput instanceof(Function)){
+              if(!leftHand)leftHand=firstFreeName(fgh)+"(x)"
+              outMsg=leftHand
+              outAns=rightHand
+              var displayName=leftHand.substring(0,leftHand.indexOf("("))
+              msg=cleanupFuncString(rightHand)
+              if(msg.replaceAll(" ","").match(`(?<!\S)${displayName}\\(`)){ //circular definition
+                outMsg="Circular definition: "+ leftHand+" = "+rightHand
+                outAns=null
+              }
+              else{
+                if(!leftHand) leftHand=firstFreeName(abc) 
+                if(isValidEvalString(displayName+"=(x)=>{ return ("+msg+") }")){
+                const graphFunc=evalOutput
+                console.log(eval(displayName))
+                if(isValidEvalString(displayName+"(0)",false)){
+                  
+                  outRO=new Graph(displayName,null,evalOutput,graphColors[renderables.length%graphColors.length])
+                  outMsg=leftHand
+                  outAns=rightHand
+                }
+                else{
+                  outMsg="Undefined: "+leftHand+" = "+rightHand
+                  outAns=null
+                }
+              }
+            }
+
+
+
+
+            }
+            else if(msg.includes("=")){
               var s=msg.split("=")
               outMsg=s[0]
               outAns=s[1]
@@ -410,8 +450,33 @@ function beautifyMathString(msg:string){
   
   return msg
 }
+function hideAllOptions(){
+  for(const o of logBox.querySelectorAll<HTMLElement>(".options-container")){
+    o.style.display="none"
+  }
+}
+function addLogOptions(msg:string,htmlNode:HTMLElement,ro:Renderable|null=null){
+  var container=document.createElement("section")
+  container.style.display="none"
+  container.classList.add("options-container")
+  htmlNode.append(container)
+  container.innerHTML=msg
+  var slideSel=container.querySelector<HTMLElement>(".slide-select")
+  if(slideSel){
+    const slideCell_onclick=(sender:any)=>{
+      for(const child of slideSel!.children[0].children[0].children)
+        child.classList.remove("selected")
+      sender.classList.add("selected")
+      if(ro)
+        ro.options[slideSel!.getAttribute("name") as string]=sender.innerHTML
+      Render()
+    }
+    for(const child of slideSel!.children[0].children[0].children){
+      child.addEventListener("mousedown",(e)=>slideCell_onclick(child))
+    }
+  }
+}
 
-// new printing function
 function appendLog(msgQ:string,msgAns:string|null=null,value:string="",name:string="",sliderValue:number|null=null,isExecutable:boolean=false):HTMLElement{
   var writeTo:HTMLElement|null=selectedHtmlNode
   if(writeTo){
@@ -436,6 +501,8 @@ function appendLog(msgQ:string,msgAns:string|null=null,value:string="",name:stri
     var ro=getRenderable(name)
     if(ro) setSelection(ro,!keys.Shift)
     else setSelection(writeTo,!keys.Shift)
+    var options=writeTo!.querySelector("section")
+    if(options) options.style.display="block"
   })
   selectedHtmlNode=null
   return writeTo

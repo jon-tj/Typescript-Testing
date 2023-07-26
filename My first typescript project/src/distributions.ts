@@ -39,7 +39,7 @@ class Distribution extends Renderable{
         if(super.update) super.update()
         var minXt=view.transformX(this.minX)
         var maxXt=view.transformX(this.maxX)
-        ctx.fillStyle=this.color
+        ctx.fillStyle=this.options.color
         ctx.fillRect(minXt,0,maxXt,100)
         ctx.fillRect(0,0,1000,100)
         

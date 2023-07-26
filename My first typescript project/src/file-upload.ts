@@ -70,7 +70,7 @@ class DataFrame extends Renderable{
             this.numeric()
             for(var i=0; i<this.cells.length; i++){
                 var name=this.name+".virtual["+i+"]"
-                this.virtual.push(new VirtualCandle(name,i-timeCol.length,this.cells[i][0],this.cells[i][1],this.cells[i][2],this.cells[i][3],this.cells[i][5]))
+                this.virtual.push(new Candle(name,i-timeCol.length,this.cells[i][0],this.cells[i][1],this.cells[i][2],this.cells[i][3],this.cells[i][5]))
                 
             }
 
@@ -144,7 +144,7 @@ class DataFrame extends Renderable{
                 var xT=view.transformX(this.virtual[0].x)
                 for(const v of this.virtual){
                     var x=xT+=dx
-                    if(v.display)(v as VirtualCandle).RenderVirtual(x)
+                    if(v.display)(v as Candle).RenderVirtual(x)
                 }
                 break
             case 'ssb':

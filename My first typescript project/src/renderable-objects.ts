@@ -363,20 +363,7 @@ class Vector extends Renderable{
         ctx.stroke()
     }
 }
-class VirtualVector extends Vector{
-    constructor(x:number,y:number,w:number,h:number,color:string|null=null){
-        if(!color)color="#fff"
-        super("vector",null,[w,h],null,x,y,color)
-    }
-}
-
-class VirtualPoint extends Point{
-    constructor(x:number,y:number,color:string|null=null){
-        if(!color)color="#fff"
-        super("point",null,x,y,color)
-    }
-}
-class VirtualCandle extends Renderable{
+class Candle extends Renderable{
     open:number;high:number;low:number; close:number; volume:number
     constructor(name:string,x:number,open:number,high:number,low:number,close:number,volume:number){
         super(name,null,x,open,close>open?"#1f3":"#f13")

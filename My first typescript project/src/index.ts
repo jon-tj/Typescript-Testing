@@ -206,6 +206,7 @@ function sortRenderableObjects(){
 
 // Setting up listeners
 document.addEventListener("keydown",(e)=>{
+  console.log(e.key)
   if(Object.keys(keys).includes(e.key)) keys[e.key]=true
   if(e.key=="o" && e.ctrlKey){ // open file
     document.querySelector<HTMLInputElement>("#file-upload")!.click()
@@ -234,10 +235,18 @@ document.addEventListener("keydown",(e)=>{
       }
     Render()
   }
-  if(e.key=="f" && e.ctrlKey){ //fitting with linreg
+  if(e.key=="f" && e.ctrlKey){ //fitting with linreg or a selected model
     e.preventDefault()
-    if(selection.length>0){
-      if(selection[0] instanceof(Renderable)){
+    if(selection.length>0 && selection[0] instanceof(Renderable)){
+      if(selection[0] instanceof(Graph)){ // use genetic algorithm fit
+        var evalString="fit("
+        for(const s of selection){
+          if(s instanceof(HTMLElement))return
+          evalString+=s.name+", "
+        }
+        setSelection()
+        inputReceived(evalString)
+      }else{ // use linreg
         var evalString="linreg("
         for(const s of selection){
           if(s instanceof(HTMLElement))return

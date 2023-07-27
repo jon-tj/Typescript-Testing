@@ -37,6 +37,10 @@ const consoleInput=document.querySelector<HTMLInputElement>("#console-input")!
 const outputField=document.querySelector<HTMLParagraphElement>("#output-field")!
 consoleInput.focus()
 
+// We store a list of variables that are defined in console for parameter optimization.
+// The array is never cleared for now, so yes, the code gets slower the more you work with it.
+const freeVariables:string[]=[]
+
 //#region Calc window listeners
 // Drag calc window or double click to hide/show
 const calcWindow=document.querySelector<HTMLDivElement>("#calc-window")!
@@ -268,7 +272,6 @@ function inputReceived(msg:string,submit:boolean=true){
               outMsg=leftHand
               outAns=rightHand
               var displayName=leftHand.substring(0,leftHand.indexOf("("))
-              msg=cleanupFuncString(rightHand)
               if(msg.replaceAll(" ","").match(`(?<!\S)${displayName}\\(`)){ //circular definition
                 outMsg="Circular definition: "+ leftHand+" = "+rightHand
                 outAns=null
@@ -276,29 +279,32 @@ function inputReceived(msg:string,submit:boolean=true){
               else{
                 if(!leftHand) leftHand=firstFreeName(abc) 
                 if(isValidEvalString(displayName+"=(x)=>{ return ("+msg+") }")){
-                const graphFunc=evalOutput
-                console.log(eval(displayName))
-                if(isValidEvalString(displayName+"(0)",false)){
-                  
-                  outRO=new Graph(displayName,null,evalOutput,graphColors[renderables.length%graphColors.length])
-                  outMsg=leftHand
-                  outAns=rightHand
-                }
-                else{
-                  outMsg="Undefined: "+leftHand+" = "+rightHand
-                  outAns=null
+                  console.log(eval(displayName))
+                  if(isValidEvalString(displayName+"(0)",false)){
+                    
+                    outRO=new Graph(displayName,null,evalOutput,graphColors[renderables.length%graphColors.length])
+                    outMsg=leftHand
+                    outAns=rightHand
+                  }
+                  else{
+                    outMsg="Undefined: "+leftHand+" = "+rightHand
+                    outAns=null
+                  }
                 }
               }
             }
-
-
-
-
+            else if(evalOutput instanceof(Renderable)){
+              outMsg=msg
+              outAns=null
+              if(submit) addRenderable(evalOutput)
             }
             else if(msg.includes("=")){
               var s=msg.split("=")
               outMsg=s[0]
               outAns=s[1]
+              eval(s[0]+"="+s[1])
+              if(!freeVariables.includes(s[0]))
+                freeVariables.push(s[0])
               sliderValue=evalMath(outAns) as number
             }
             else{

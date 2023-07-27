@@ -2,6 +2,7 @@ function dist(obj:any,nBins:number=10){
     console.log("hey!")
     if(obj instanceof Array){
         var ro=new Distribution(firstFreeName(distNames),null,obj,nBins)
+        return ro
         console.log(ro.name)
         eval(ro.name+"=ro")
         addRenderable(ro)
@@ -46,5 +47,17 @@ class Distribution extends Renderable{
     }
     get bounds():Rect{
         return new Rect(this.minX,this.y-this.maxCount ,this.maxX-this.minX,this.maxCount)
+    }
+}
+const sqrt2pi=Math.sqrt(2*pi)
+function normal(mu:number,sigma:number){
+    return (x:number)=>(Math.exp((x-mu)**2/(-2*sigma**2))/(sigma*sqrt2pi))
+}
+function bump(mu:number,sigma:number){
+    return (x:number)=>{
+        x=(x-mu)/sigma
+        if(x<1 && x>-1)
+            return Math.exp(-1/(1-x*x))/0.368
+        return 0
     }
 }

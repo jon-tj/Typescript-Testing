@@ -10,7 +10,7 @@ Evaluate any function with "f(2)". Built-in functions include: "nCr","lg(x)","lg
 If the entered text can not be evaluated, it will be written in the log as a comment.<br>
 Double-click to add a point on the screen, or drag to create a vector. <br>
 <br>
-Points are written in (), vectors in [] and matrices in [[]]. Vectors and matrices support iterative notation; [i](3) becomes [0,1,2], [[i+j]](1,2) becomes [[0,1]].<br>
+Points are written in (), vectors in [] and matrices in [[]]. Vectors and matrices support iterative notation; \[i](3) becomes \[0,1,2], \[\[i+j]](1,2) becomes \[\[0,1]].<br>
 Data can be opened with ctrl+o or the upload button in the navbar. Supported data thus far includes only csv. If the file is recognized as a yfinance file, it will be displayed in candles.<br>
 RM+drag to select everything inside a rectangle, or ctrl+a to select everything.<br>
 ctrl+f to fit a line to the selection, or write linreg(...objects) in the console. Support for fitting polynomials is coming.<br>

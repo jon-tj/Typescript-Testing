@@ -1,0 +1,21 @@
+{
+  "name": "cactusjs",
+  "productName": "Cactus",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "start": "tsc --build && electron .",
+    "qopen": "electron . -m 'I AM SPEEEED'"
+  },
+  "keywords": [],
+  "author": "Jon",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^25.4.0",
+    "tsc": "^2.0.4",
+    "typescript": "^5.1.6"
+  }
+}

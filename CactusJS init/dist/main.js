@@ -1,3 +1,2 @@
-//? just a simple example
-console.log("hi ;)");
+var editor = new Editor();
 //# sourceMappingURL=main.js.map

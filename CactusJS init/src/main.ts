@@ -1,3 +1,2 @@
-//? just a simple example
-
-console.log("hi ;)")
+const editorBgCanvas=document.getElementById('editor-bg-canvas') as HTMLCanvasElement
+const editor=new Editor(editorBgCanvas)

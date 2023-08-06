@@ -4,11 +4,33 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/themes/vanilla.css">
     <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
 </head>
-<script src="../dist/main.js"></script>
 <body>
-    <p>Hello world</p>
+    <section id="navbar">
+    </section>
+    <section id="main-env">
+        <aside id="explorer">
+    
+        </aside>
+        <aside id="content">
+            <section id="editor">
+                <aside id="view_0" class="view">
+                    <canvas id="editor-bg-canvas"></canvas>
+                    <!--<img src="../public/img/cactus.png" alt="Cactus JS">-->
+                </aside>
+            </section>
+            <section id="terminal">
+                
+            </section>
+        </aside>
+    </section>
 </body>
+<script src="../dist/text-editor.js"></script>
+<script src="../dist/main.js"></script>
+<script src="../dist/navbar-builder.js"></script>
+<script src="../dist/run-snippets.js"></script>
+<script src="../dist/terminal.js"></script>
 </html>

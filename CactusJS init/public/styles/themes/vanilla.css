@@ -1,0 +1,12 @@
+:root{
+    --navbar-bg: #a39942;
+    --navbar-bg-hover: #d8cb5a;
+    --sidebar-bg: #ffed47;
+    --editor-bg: #27303b;
+    --editor-bg-light: #394655;
+    
+    --navbar-vertical-bg: #394655;
+    --navbar-vertical-bg-hover: #4f5f70;
+    --navbar-vertical-primary: #c6cacf;
+    --navbar-vertical-secondary: #878c92;
+}

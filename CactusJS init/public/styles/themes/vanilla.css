@@ -1,12 +1,19 @@
 :root{
-    --navbar-bg: #a39942;
+    --navbar-bg: #444444;
+    --navbar-primary: rgb(93, 97, 97);
     --navbar-bg-hover: #d8cb5a;
     --sidebar-bg: #ffed47;
-    --editor-bg: #27303b;
-    --editor-bg-light: #394655;
+    --editor-bg: rgb(45,45,45);
+    --editor-outline: rgb(105, 105, 105);
+    --editor-primary: #d2d2d2;
+    --editor-bg-light: #383838;
+    --editor-bg-dark: #0f0c0c;
+    --code-bg: rgb(37, 37, 37);
     
     --navbar-vertical-bg: #394655;
     --navbar-vertical-bg-hover: #4f5f70;
     --navbar-vertical-primary: #c6cacf;
     --navbar-vertical-secondary: #878c92;
+    font-family: Arial;
+    line-height: 1.5;
 }

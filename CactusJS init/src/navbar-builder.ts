@@ -101,8 +101,4 @@ createMenuItem(root,menuTree)
 
 mainEnv.addEventListener('click',hideActiveMenu)
 
-document.body.addEventListener('keydown',(e)=>{
-    var shc=(e.ctrlKey?"Ctrl+":"")+(e.shiftKey?"Shift+":"")+e.key.toUpperCase()
-    if(shortcutKeys[shc]) shortcutKeys[shc]()
-})
 //#endregion

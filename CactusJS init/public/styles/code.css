@@ -1,0 +1,76 @@
+.string{
+    color:#e29272
+}
+.self{
+    color:#bd93fa
+}
+.comment{
+    color:#6272a4
+}
+.warning{
+    color:#db441e
+}
+.question{
+    color:#20aabd
+}
+.highlighted{
+    color:#5882ff
+}
+.operator{
+    color:#c8a04b
+}
+.number{
+    color:#50e678
+}
+.keyword{
+    color:#ff78be
+}
+.property{
+    color:#8cdcfa
+}
+.function{
+    color:#ffed4b
+}
+pre.code{
+    border-radius: 10px;
+    padding: 2em;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    color:var(--editor-primary);
+    background-color: rgb(37, 37, 37);
+    position: relative;
+    margin: 0;
+    margin-top: 1em;
+    min-width: fit-content;
+    cursor:text;
+}
+code>*{ 
+    font-family: "Courier New", Courier, monospace;
+}
+code>span.lang{
+    margin-left: 0.3em;
+    float:right;
+}
+.unselectable{
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+code>button{
+    background-color: transparent;
+    border: none;
+    float: right;
+    border-radius: 50%;
+    position: relative;
+    top:-7px;
+    width:32px;
+    height:32px;
+    padding: 5px;
+    transition: background-color 0.2s;
+}
+code>button:hover{
+    background-color: var(--editor-bg-light);
+}

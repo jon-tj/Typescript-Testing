@@ -1,21 +1,71 @@
-body{margin:0}
+body{
+    margin:0;
+    font-size: 11pt;
+    overflow: hidden;
+}
+h1{
+    font-size: 20pt;
+    margin: 0.3em;
+    margin-left: 0;
+}
+h2{
+    font-size: 16pt;
+    margin: 0.3em;
+    margin-left: 0;
+}
 
 /* Panes */
 #content{
     position: absolute;
-    top:2em; left:0; right:0; bottom:0;
-    background-color: rgb(152, 185, 142);
+    top:0; left:0; right:0; bottom:0;
+}
+#explorer{
+    width: 16em;
+    overflow: hidden;
+    position: absolute;
+    top:0; left:0; bottom:0;
+    width:calc(16em - 1px);
+    border-right: 1px solid rgb(87, 80, 80);
+    background-color: var(--editor-bg-light);
 }
 #editor{
     position: absolute;
-    top:0; left:20em; right:0; bottom:1em;
-    background-color: rgb(52, 121, 31);
+    top:0; left:16em; right:0; bottom:1.5em;
+    background-color: var(--editor-bg);
+    color:var(--editor-primary);
 }
+
+section.tabs{
+    height:2em;
+    background-color: var(--navbar-bg);
+}
+aside.tab>span{
+    position: relative;
+    top:-5px;
+}
+aside.tab>img{
+    margin-right: 0.5em;
+}
+aside.tab{
+    display: inline-block;
+    background-color: var(--editor-bg); /*should actually be -dark*/
+    border-top-right-radius: 10px;
+    border-top-left-radius: 10px;
+    height:calc(100% - 5px);
+    padding-top: 5px;
+    padding-left: 1em;
+    padding-right: 1.5em;
+    color:rgb(159, 159, 160);
+}
+aside.tab.selected{
+    background-color: var(--editor-bg);
+}
+
 #terminal{
     position: absolute;
     left:0; right:0; bottom:0;
-    height:1em;
-    background-color: aliceblue;
+    height:1.5em;
+    background-color: rgb(133, 94, 43);
     z-index: 9;
 }
 
@@ -33,11 +83,10 @@ li.navbar:hover{background-color: var(--navbar-bg-hover);}
 
 #navbar{
     position: absolute;
-    top: 0; left: 0; right:0;
+    top: 0; left: 0; width:16em;
     height:2em;
     background-color: var(--navbar-bg);
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .navbar.horizontal{margin:4px;}
 .navbar{
@@ -66,4 +115,26 @@ li>span{
     color:var(--navbar-vertical-secondary);
     float: right;
     margin-left: 1em;
+}
+a{
+    color:rgb(95,117,183)
+}
+a:hover{
+    color:rgb(119, 145, 223)}
+.underline{
+    text-decoration: underline;
+}
+section.md{
+    padding-left: 2em;
+}
+
+#scroll-capture{
+    position: absolute;
+    top:0; left:0; right:-1.5em; bottom:0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+canvas{
+    position: absolute;
+    top:50px
 }

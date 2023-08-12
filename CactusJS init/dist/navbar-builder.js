@@ -104,10 +104,5 @@ function createMenuItem(parent, obj, name, level) {
 var shortcutKeys = {};
 createMenuItem(root, menuTree);
 mainEnv.addEventListener('click', hideActiveMenu);
-document.body.addEventListener('keydown', function (e) {
-    var shc = (e.ctrlKey ? "Ctrl+" : "") + (e.shiftKey ? "Shift+" : "") + e.key.toUpperCase();
-    if (shortcutKeys[shc])
-        shortcutKeys[shc]();
-});
 //#endregion
 //# sourceMappingURL=navbar-builder.js.map

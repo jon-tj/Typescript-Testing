@@ -5,22 +5,21 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/code.css">
     <link rel="stylesheet" href="styles/themes/vanilla.css">
     <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
 </head>
 <body>
-    <section id="navbar">
-    </section>
     <section id="main-env">
+        <section id="navbar">
+        </section>
         <aside id="explorer">
-    
         </aside>
         <aside id="content">
-            <section id="editor">
-                <aside id="view_0" class="view">
-                    <canvas id="editor-bg-canvas"></canvas>
-                    <!--<img src="../public/img/cactus.png" alt="Cactus JS">-->
-                </aside>
+            <section id="editor" >
+                <div id="scroll-capture">
+                    <canvas id="editor-canvas"></canvas>
+                </div>
             </section>
             <section id="terminal">
                 
@@ -29,8 +28,11 @@
     </section>
 </body>
 <script src="../dist/text-editor.js"></script>
+<script src="../dist/parse-md.js"></script>
 <script src="../dist/main.js"></script>
+<script src="../dist/custom-text-editor-paint.js"></script>
 <script src="../dist/navbar-builder.js"></script>
 <script src="../dist/run-snippets.js"></script>
 <script src="../dist/terminal.js"></script>
+<script src="../dist/window-events.js"></script>
 </html>

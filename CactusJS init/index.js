@@ -5,7 +5,7 @@ const isDev=process.env.NODE_ENV!=='production'
 function createMainWindow(){
     const mainWindow = new BrowserWindow({
         title:'Cactus',
-        width:1000,
+        width:1500,
         height:600
     })
     mainWindow.setMenu(null)

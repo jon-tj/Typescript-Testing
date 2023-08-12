@@ -3,12 +3,15 @@ class Tab{
     selectionIdx:{start:number,end:number}
     undoLog:UndoAction[]
     undoLogCursor:number
+    scrollX:number ; scrollY:number
+    pageHeight:number ; pageWidth:number
     constructor(public title:string, public content:string){
         this.title = title
         this.content = content
         this.undoLog=[]
         this.undoLogCursor=-1
         this.selectionIdx={start:0,end:0}
+        this.scrollX=0 ; this.scrollY=0
     }
     get selection():string|null{
         if(this.selectionIdx.start==this.selectionIdx.end) return null
@@ -22,15 +25,20 @@ class Tab{
         this.selectionIdx.start+=c.length
         this.selectionIdx.end=this.selectionIdx.start
     }
+    updatePageSize(){
+        this.pageHeight=getPageSize()
+    }
 }
 class Editor{
     canvas:HTMLCanvasElement
     tabs:Tab[]
     activeTabIdx:number|null
+    hoverTabIdx:number|null
     constructor(canvas:HTMLCanvasElement,tabs:Tab[]=[]){
         this.canvas=canvas
         this.tabs = tabs
-        this.activeTabIdx = null
+        this.activeTabIdx = 0 // should be set to null
+        this.hoverTabIdx = null
     }
     get isEmpty(){return this.tabs.length == 0}
     get selection():string|null{
@@ -39,7 +47,7 @@ class Editor{
         else return null
     }
     get activeTab():Tab|null{
-        if(this.activeTabIdx && this.activeTabIdx>=0)
+        if(this.activeTabIdx!=null)
             return this.tabs[this.activeTabIdx]
         return null
     }

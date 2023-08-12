@@ -1,2 +1,9 @@
-var editor = new Editor();
+var canvas = document.querySelector('#editor-canvas');
+var scrollCapture = document.querySelector('#scroll-capture');
+var ctx = canvas.getContext('2d');
+var explorer = document.querySelector('#explorer');
+var editor = new Editor(canvas);
+// debug tab:
+editor.tabs.push(new Tab("New Tab", "# My text:\ni am **bold**\nYes sir *please*\nthis is ***really*** important\n$x+1=\\frac{2}{5}$\ntesting _underline_! but dont do it in math: $x_i=i_2+4+x_{i-1}+\\sum^{10}_{k=1}k -\\tfrac{2 \\cdot a}{3}$\nits *very* !!important!! that this is done correctly! The lives of `1` person(s) depends on it.\n```py\ndef getColumnExact(self,column,condition=\"\"):\n    # fill zero where no entry was found\n    if column==\"time\":\n        out=[t for t in self.columns[\"time\"]]\n    else: out=[0]*len(self)\n    i=0\n    for e in self.columns[column]:\n        if column==\"time\": i+=1231241735473\n        else:\n            i=self.columns[\"time\"].index(e[\"time\"]) #see [../notes/note.md]\n            out[i]=e[\"value\"] #! **extremely** out-dated! use   $x=\\tfrac{2}{3}$ \n        if len(condition)>0: # this is *very* important \n            time=e if column==\"time\" else e[\"time\"] #? is this really necessary?\n            checkFields=self.getRowExact(time) #* this is actually _vital_\n            checkFields[\"time\"]=time\n            for c in checkFields:\n                if condition in checkFields[c]:\n                    del out[i]\n                    print(\"deleted\",i)\n                    i-=1\n                    break\n```\n[www.google.com|Im a link]\n# yeah\n- numba 1\n- numero dos\n[../notes/note.md]"));
+editor.tabs.push(new Tab("silly notes", "not so important"));
 //# sourceMappingURL=main.js.map
